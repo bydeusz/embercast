@@ -1,0 +1,42 @@
+{
+  "_bron": "Afgelezen uit CHITUBOX v1.4.1 op 2026-11-13 (profiel: Siraya Tech - Build (Sonic Grey/Smoky Black) - 50um)",
+  "printer": {
+    "naam": "HALOT-ONE PLUS",
+    "bestandsformaat": "cxdlp",
+    "resolutie_px": [4320, 2560],
+    "bouwvolume_mm": [172.8, 102.4, 160.0],
+    "pixelgrootte_um": 40,
+    "spiegelen": "normaal"
+  },
+  "hars": {
+    "naam": "Siraya Tech - Build (Sonic Grey/Smoky Black)",
+    "dichtheid_g_per_ml": 1.1,
+    "prijs_per_liter": 30.0
+  },
+  "print": {
+    "laaghoogte_mm": 0.05,
+    "bodemlagen": 6,
+    "belichtingstijd_s": 3.2,
+    "bodem_belichtingstijd_s": 35.0,
+    "licht_uit_vertraging_s": 4.0,
+    "bodem_liftafstand_mm": 6.0,
+    "liftafstand_mm": 6.0,
+    "bodem_terugtrekafstand_mm": 6.0,
+    "terugtrekafstand_mm": 6.0,
+    "bodem_liftsnelheid_mm_per_min": 60,
+    "liftsnelheid_mm_per_min": 60,
+    "bodem_terugtreksnelheid_mm_per_min": 150,
+    "terugtreksnelheid_mm_per_min": 180
+  },
+  "geavanceerd": {
+    "bodem_licht_pwm": 255,
+    "licht_pwm": 255,
+    "grijswaarde": 255,
+    "anti_aliasing": "uit",
+    "krimpcompensatie": false,
+    "tolerantiecompensatie": false,
+    "bodem_tolerantiecompensatie": false,
+    "printtijdcompensatie": false,
+    "masker": false
+  }
+}
