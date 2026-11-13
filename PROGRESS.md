@@ -19,6 +19,17 @@ Waar je op moet letten:
 5. Welke van de drie pinnetjes zijn er (heel) uitgekomen?
 6. Toont de printer een voorbeeldplaatje? (Bij deze print is het zwart, dat is nog verwacht.)
 
+**3. Testprint `testprints/embercast-test-2.cxdlp` (pas na een geslaagde testprint 1).**
+- Wat het is: hetzelfde testmodel, maar 5 mm opgetild op 117 automatische supports (preset Medium) met een raft van 1 mm.
+- Printtijd volgens UVtools ongeveer 1 uur en 31 minuten, ongeveer 3,4 ml hars, 330 lagen.
+- Gecontroleerd met UVtools: geen zwevende supports en geen harsvallen. UVtools meldt wel de onderkant van het plaatje als "eiland" met overhangende stukjes. Dat doet UVtools bij elke platte onderkant die op supportpuntjes rust.
+
+Waar je op moet letten:
+1. Blijft de raft aan de bouwplaat zitten, en is hij met een schraper los te krijgen (de rand loopt schuin af)?
+2. Staan alle supports er, of zijn er kolommen afgebroken of los gekomen?
+3. Hangt het plaatje aan de supports, of is het (deels) van de supports losgescheurd en op de FEP blijven plakken?
+4. Gaan de supports goed los van de onderkant van het plaatje, en hoe zien de contactpunten eruit (putjes, bultjes)?
+
 Ik werk intussen verder aan de stappen die hier niet van afhangen.
 
 ## Stand van zaken
@@ -28,8 +39,8 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 | 0 | Omgeving (Rust, mslicer, eerste build) | klaar |
 | 1 | CXDLP-export | gebouwd en met UVtools gecontroleerd, wacht op testprint |
 | 2 | Printer-preset Halot One Plus + Siraya Build | klaar |
-| 3 | Supports verbeteren | bezig |
-| 4 | Hollowing + drain holes | open |
+| 3 | Supports verbeteren | gebouwd, wacht op testprint 2 |
+| 4 | Hollowing + drain holes | bezig |
 | 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | open |
 | 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | open |
 | 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | open |
@@ -41,13 +52,22 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 - Testmodel: `testprints/make_test_model.py` maakt `embercast-test-1.stl`. Het printbestand maak je opnieuw met het commando onder "Hoe maak je het testbestand opnieuw".
 - Stap 2: printer `Creality HALOT-ONE PLUS` in de printerlijst van de app. Harsprofielen staan in `mslicer/common/src/slice/profiles.rs`, met als eerste "Siraya Tech Build 50 µm". In het paneel Slice Config kies je het profiel bij "Resin Profile". Een test vergelijkt het profiel met `profiles/halot-one-plus_siraya-build-50um.json`. De standaardinstellingen van de app en van de CLI zijn nu deze printer met dit profiel.
 
+- Stap 3, supports:
+  - Presets Light, Medium en Heavy met elk een eigen tipdikte (0,3 / 0,4 / 0,6 mm) en lijfdikte (0,8 / 1,2 / 1,6 mm). De keuzelijst toont de naam, en tipdiameter, tiplengte, lijfdiameter en vrije ruimte zijn aan te passen.
+  - Raft: hoogte en rand uit de instellingen worden nu gebruikt. De onderkant is breder dan de bovenkant, zodat een schraper eronder kan. Hoogte 0 betekent geen raft.
+  - Supports bewegen mee met hun model. Hoger zetten maakt de kolommen langer. Draaien of schalen wist de supports, want dan passen ze niet meer.
+  - Supports en supportinstellingen worden opgeslagen in het projectbestand (projectversie 17). Oudere projecten openen gewoon.
+  - Automatisch plaatsen: alleen nog binnen het gebied onder het model, standaard om de 2,5 mm (was 50 mm). Geen supports meer naar vlakken die binnenin het model liggen, bijvoorbeeld bij overlappende delen.
+  - Handmatig plaatsen (klikken op het model) en verwijderen (selecteren, Delete) bestonden al in mslicer.
+  - Hulpprogramma `mslicer/target/release/supports` (crate `tools`): plaatst automatisch supports onder een STL en schrijft model, supports en raft samen weg als één STL. Zo kan ik supports zonder de app via de slicer en UVtools controleren.
+
 ## Nu bezig
 
-Stap 3: supports (presets licht/middel/zwaar, raft, handmatig plaatsen en verwijderen).
+Stap 4: hollowing en drain holes.
 
 ## Volgende stap
 
-Stap 4: hollowing en drain holes.
+Stap 5: analyse (islands, resin traps, overhangs, laagvoorvertoning).
 
 ## Hoe maak je het testbestand opnieuw
 
@@ -57,6 +77,13 @@ Vanuit de hoofdmap, na `cargo build -r -p slicer` in `mslicer/`. De CLI gebruikt
 python3 testprints/make_test_model.py testprints/embercast-test-1.stl
 mslicer/target/release/slicer --mesh testprints/embercast-test-1.stl testprints/embercast-test-1.cxdlp
 /Applications/UVtools.app/Contents/MacOS/UVtoolsCmd print-issues testprints/embercast-test-1.cxdlp
+```
+
+Testprint 2 (na `cargo build -r -p tools --bin supports`):
+
+```
+mslicer/target/release/supports --preset medium testprints/embercast-test-1.stl testprints/embercast-test-2.stl
+mslicer/target/release/slicer --mesh testprints/embercast-test-2.stl testprints/embercast-test-2.cxdlp
 ```
 
 ## Werkafspraken voor een nieuwe sessie
@@ -77,11 +104,15 @@ mslicer/target/release/slicer --mesh testprints/embercast-test-1.stl testprints/
 - 2026-11-13: de CLI zet modellen nu net als de app een halve laag omlaag, zodat elke laag in het midden wordt gesneden. Zonder dat bleef laag 0 van de theepot leeg.
 - 2026-11-13: `SliceConfig::default()` is nu de Halot One Plus met het Siraya-profiel (was een Elegoo Saturn). Je bestaande mslicer-instellingen van stap 0 bewaren nog de oude standaard; die verdwijnen vanzelf bij het hernoemen naar Embercast in stap 6, of met "Reset Config" in het paneel Workspace.
 - 2026-11-13: het inlezen van `.cxdlp` controleert vóór elk blok of er genoeg bytes zijn, zodat een kapot bestand een foutmelding geeft en de app niet laat crashen.
+- 2026-11-13: supports worden opgeslagen ten opzichte van de positie van het model (`tools/src/supports/set.rs`). Bij een andere schaal of draaiing vervallen ze, in plaats van dat ik ze probeer mee te draaien.
+- 2026-11-13: preset bepaalt de vorm van een support, de dichtheid staat apart onder "Auto Placement". Zo blijven de twee los te regelen.
 
 ## Bekende beperkingen
 
 - In de laagafbeelding staat de F op zijn kop ten opzichte van het bovenaanzicht van het model. mslicer doet dat ook bij de andere formaten. De Chitubox-vergelijking of de testprint moet uitwijzen of dit goed is op de Halot.
 - CXDLP kent geen hoogte en belichting per laag. Overgangslagen en variabele laaghoogte werken daarom niet; in de app is CXDLP uitgeschakeld bij variabele laaghoogte.
 
+- Het inlezen van projectbestanden (uit mslicer) begrenst nog niet het aantal modellen en meshes in een bestand. Een gemanipuleerd projectbestand kan de app dus nog laten vastlopen. Voor de nieuwe supportdelen is dat wel begrensd.
+- UVtools meldt bij een platte onderkant op supports altijd een "eiland". Extra supports zetten op plekken die in de lagen echt los hangen, hoort bij stap 5.
 - CXDLP kent één terugtreksnelheid voor alle lagen. Het profiel heeft 150 mm/min voor de bodemlagen en 180 mm/min daarna; in het bestand komt 180 mm/min (3 mm/s).
 - CXDLP slaat snelheden op in hele mm/s, bodembelichting en liftafstand in hele seconden en millimeters, en de normale belichting in tienden van een seconde.
