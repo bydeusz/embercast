@@ -10,6 +10,7 @@ use args::{Args, Model};
 use clap::{CommandFactory, FromArgMatches};
 use clone_macro::clone;
 use image::{ImageReader, RgbaImage};
+use nalgebra::Vector3;
 
 use common::{
     progress::Progress,
@@ -27,6 +28,7 @@ mod args;
 
 /// Terminal escape sequence to clear the line and move the cursor to the start.
 const RESET_LINE: &str = "\u{001b}[0G\u{001b}[K";
+const Z_TOLERANCE_MM: f32 = 1e-4;
 
 fn main() -> Result<()> {
     let matches = Args::command().get_matches();
@@ -54,10 +56,15 @@ fn main() -> Result<()> {
         // Center the model
         let bounds = Bounds3D::from_mesh(&mesh);
         let center = (slice_config.platform_resolution / 2).cast::<f32>();
-        mesh.set_position((center - bounds.center().xy()).to_homogeneous() + model.position);
+        let half_layer = slice_config.slice_height.get::<Milimeter>() / 2.0;
+        let on_plate = Vector3::new(0.0, 0.0, -bounds.min.z - half_layer);
+        mesh.set_position(
+            (center - bounds.center().xy()).to_homogeneous() + model.position + on_plate,
+        );
 
         // Scale the model into printer-space (mm => px)
         mesh.set_scale(model.scale.component_mul(&mm_to_px));
+        let bounds = Bounds3D::from_mesh(&mesh);
 
         println!(
             "Loaded `{}`. {{ vert: {}, face: {} }}",
@@ -135,9 +142,10 @@ fn load_mesh<T: Read + Seek + Send + 'static>(reader: T, format: &str) -> Result
 
 fn is_oob(bounds: &Bounds3D, slice_config: &SliceConfig) -> bool {
     let Bounds3D { min, max } = bounds;
+    let below_plate = -slice_config.slice_height.get::<Milimeter>() / 2.0 - Z_TOLERANCE_MM;
     min.x < 0.0
         || min.y < 0.0
-        || min.z < 0.0
+        || min.z < below_plate
         || max.x > slice_config.platform_resolution.x as f32
         || max.y > slice_config.platform_resolution.y as f32
         || max.z > slice_config.platform_size.z.get::<Milimeter>()
