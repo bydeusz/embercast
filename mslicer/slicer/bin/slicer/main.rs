@@ -20,6 +20,7 @@ use common::{
 };
 use slicer::{
     geometry::{bounds::Bounds3D, mesh::Mesh},
+    post_process::cavities::detect_cavities,
     slicer::{Slicer, SlicerModel},
     util::export_raster,
 };
@@ -92,6 +93,7 @@ fn main() -> Result<()> {
 
     let now = Instant::now();
     let hollow = args.hollow();
+    let analyze = args.analyze;
     let preview = if let Some(path) = args.preview {
         ImageReader::open(path)?.decode()?.to_rgba8()
     } else {
@@ -102,6 +104,16 @@ fn main() -> Result<()> {
         let mut layers = slicer.slice_raster();
         if let Some(hollow) = hollow {
             hollow.post_slice(&slicer.slice_config, &mut layers, Progress::new());
+        }
+        if analyze {
+            let report = detect_cavities(&slicer.slice_config, &layers, &Progress::new());
+            println!("{RESET_LINE}Cavities: {}", report.cavities.len());
+            for cavity in &report.cavities {
+                println!(
+                    "  {:?}, layers {} to {}, {:.1} mm³",
+                    cavity.kind, cavity.first_layer, cavity.last_layer, cavity.volume_mm3
+                );
+            }
         }
         let voxels = (layers.iter())
             .flat_map(|x| x.data.iter().filter(|x| x.value != 0).map(|x| x.length))

@@ -146,7 +146,7 @@ impl Default for RenderConfig {
             preview: Preview::default(),
 
             grid_size: 12.16,
-            overhangs: (false, 30.0),
+            overhangs: (true, 30.0),
             normals: DebugRender::new().with_color(SRgb::new(0.5, 0.5, 1.0)),
             bounding_box: DebugRender::new().with_color(SRgb::new(1.0, 0.5, 1.0)),
             basis_size: 100.0,

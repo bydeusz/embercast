@@ -22,6 +22,7 @@ use egui_phosphor::regular::{
 };
 use egui_plot::{Line, LineStyle, Plot, VLine};
 use egui_wgpu::Callback;
+use slicer::post_process::cavities::{Cavity, CavityKind};
 use epaint_default_fonts::UBUNTU_LIGHT;
 use image::{ImageFormat, Rgba, RgbaImage, imageops::FilterType};
 use nalgebra::Vector2;
@@ -35,7 +36,7 @@ use crate::{
         },
         slice::{
             PreviewImage, SliceOperation,
-            annotations::ISLAND_COLOR,
+            annotations::{Annotation, ISLAND_COLOR, RESIN_TRAP_COLOR, SUCTION_CUP_COLOR},
             result::{GenericSliceData, GenericSliceResult, RasterSliceResult, SliceResult},
         },
         state::{PreviewMode, UiState},
@@ -47,7 +48,8 @@ use crate::{
     },
     render::{slice_preview::SlicePreviewRenderCallback, workspace::PreviewRenderCallback},
     task::{
-        FileDialog, IslandDetection, ReconstructMesh, ReconstructionMode, SaveSliced, TaskManager,
+        CavityDetection, FileDialog, IslandDetection, ReconstructMesh, ReconstructionMode,
+        SaveSliced, TaskManager,
     },
     util::management::{LazyText, LazyTextureId},
 };
@@ -66,8 +68,7 @@ use common::{
 
 const FILENAME_POPUP_TEXT: &str =
     "To ensure the file name is unique, some extra random characters will be added on the end.";
-const DETECT_ISLANDS_DESC: &str =
-    "Will color disconnected chunks of voxels red in the slice preview.";
+const DETECT_ISLANDS_DESC: &str = "Marks problems in the slice preview: islands that start in the air (dark red), resin traps that keep resin inside the print (light red) and suction cups that only open toward the vat floor (amber).";
 const SURFACE_AREA_DESC: &str = "Surface area in cm² of each layer. Layers with higher areas will adhere more to the FEP potentially causing print failures.";
 const SLICING_DEFECTS: &str = "There were (potential) slicing defects detected on {layers} layer{s}. Try using the mesh repair tool and slicing again.";
 const DEFECT_EXPL: &str = "Defective meshes can cause incorrect slicing. See how many defects were detected in each layer.";
@@ -215,7 +216,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
                             .unwrap_or_default();
                         ui.add_enabled_ui(can_detect, |ui| {
                             if ui
-                                .button(concatcp!(CROSSHAIR, " Detect Islands"))
+                                .button(concatcp!(CROSSHAIR, " Check Print"))
                                 .on_hover_text(DETECT_ISLANDS_DESC)
                                 .clicked()
                                 && let GenericSliceResult::Raster(raster) = &mut result.inner
@@ -223,6 +224,11 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
                                 raster.detected_islands = true;
                                 app.tasks.add(IslandDetection::new(
                                     result.config.platform_resolution,
+                                    raster.layers.clone(),
+                                    raster.annotations.clone(),
+                                ));
+                                app.tasks.add(CavityDetection::new(
+                                    result.config.clone(),
                                     raster.layers.clone(),
                                     raster.annotations.clone(),
                                 ));
@@ -489,7 +495,7 @@ fn layer_slider(state: &mut UiState, ui: &mut egui::Ui, result: &mut RasterSlice
 
     let annotations = result.annotations.lock();
     for i in 0..layer_count {
-        if annotations.contains(i) {
+        if let Some(color) = annotations.worst(i).and_then(|kind| kind.color()) {
             let t = i as f32 / (layer_count.saturating_sub(1)) as f32;
             let width = if (slider_t - t).abs() < handle_t {
                 handle_inner_r * 2.0 + visuals.expansion
@@ -498,7 +504,7 @@ fn layer_slider(state: &mut UiState, ui: &mut egui::Ui, result: &mut RasterSlice
             };
 
             let rect = Rect::from_center_size(pos(t), Vec2::new(width, slice * 2.0));
-            painter.rect_filled(rect, 0, ISLAND_COLOR);
+            painter.rect_filled(rect, 0, color);
         }
     }
     drop(annotations);
@@ -898,10 +904,14 @@ fn sidebar(operation: &SliceOperation, result: &mut SliceResult, app: SidebarApp
 
     // If any exposure setting was changed, recalculate the print time.
     exposure_changed.then(|| raster.print_time = print_time(raster.layers.iter()));
-    let layer = &mut raster.layers[app.state.preview_layer - 1];
 
     ui.add_space(8.0);
     ui.heading("Analysis");
+
+    CollapsingHeader::new("Print Check")
+        .default_open(true)
+        .show(ui, |ui| print_check(raster, &mut app.state.preview_layer, ui));
+    let layer = &mut raster.layers[app.state.preview_layer - 1];
 
     CollapsingHeader::new("Resin Usage")
         .default_open(true)
@@ -1066,6 +1076,72 @@ fn sidebar(operation: &SliceOperation, result: &mut SliceResult, app: SidebarApp
                 });
         } else {
             ui.label("No defects detected while slicing.");
+        }
+    });
+}
+
+/// Show the islands, resin traps and suction cups that the last print check found.
+///
+/// Each line names the problem in words next to its color. A button per
+/// cavity moves the layer preview to the first layer of that cavity.
+fn print_check(raster: &RasterSliceResult, preview_layer: &mut usize, ui: &mut Ui) {
+    if !raster.detected_islands {
+        ui.label("Use Check Print above to look for islands, resin traps and suction cups.");
+        return;
+    }
+
+    let island_layers = {
+        let annotations = raster.annotations.lock();
+        (0..raster.layers.len())
+            .filter(|&layer| annotations.worst(layer) == Some(Annotation::Island))
+            .count()
+    };
+    let Some(cavities) = raster.annotations.cavities() else {
+        ui.label("Checking...");
+        return;
+    };
+
+    let swatch = |ui: &mut Ui, color: Color32| {
+        let (rect, _) = ui.allocate_exact_size(Vec2::splat(10.0), Sense::hover());
+        ui.painter().rect_filled(rect, 1, color);
+    };
+    grid("print_check").show(ui, |ui| {
+        ui.horizontal(|ui| {
+            swatch(ui, ISLAND_COLOR);
+            ui.label("Islands");
+        });
+        ui.label(match island_layers {
+            0 => "None found".to_owned(),
+            n => format!("On {n} layer{}", if n == 1 { "" } else { "s" }),
+        });
+        ui.end_row();
+
+        for (kind, name, color) in [
+            (CavityKind::ResinTrap, "Resin Traps", RESIN_TRAP_COLOR),
+            (CavityKind::SuctionCup, "Suction Cups", SUCTION_CUP_COLOR),
+        ] {
+            let found: Vec<&Cavity> = cavities.iter().filter(|c| c.kind == kind).collect();
+            ui.horizontal(|ui| {
+                swatch(ui, color);
+                ui.label(name);
+            });
+            ui.vertical(|ui| {
+                if found.is_empty() {
+                    ui.label("None found");
+                }
+                for cavity in found {
+                    let text = format!(
+                        "{:.1} mm³, layers {} to {}",
+                        cavity.volume_mm3,
+                        cavity.first_layer + 1,
+                        cavity.last_layer + 1
+                    );
+                    if ui.link(text).clicked() {
+                        *preview_layer = cavity.first_layer + 1;
+                    }
+                }
+            });
+            ui.end_row();
         }
     });
 }

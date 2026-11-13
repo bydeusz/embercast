@@ -12,6 +12,8 @@ use rayon::iter::{IndexedParallelIterator, IntoParallelRefMutIterator, ParallelI
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
+use crate::post_process::voxels::{VoxelGrid, for_each_lit_span, lit_bounds};
+
 /// The largest voxel edge of the coarse grid, in millimeters.
 const MAX_VOXEL_MM: f32 = 0.25;
 /// The number of voxels across the wall that the coarse grid aims for.
@@ -59,15 +61,9 @@ pub struct HollowReport {
     pub drain_holes: Vec<DrainHole>,
 }
 
-/// The coarse voxel grid over the lit part of all layers.
+/// The coarse voxel grid with the voxels that become the cavity.
 struct Grid {
-    origin: Vector2<usize>,
-    first_layer: usize,
-    /// Pixels per voxel along X and Y.
-    step_xy: usize,
-    /// Layers per voxel along Z.
-    step_z: usize,
-    size: [usize; 3],
+    voxels: VoxelGrid,
     cavity: Vec<bool>,
     /// True for each voxel layer that has at least one cavity voxel.
     cavity_slabs: Vec<bool>,
@@ -112,8 +108,13 @@ impl Hollow {
         let step_z = ((voxel_mm / layer_mm).round() as usize).max(1);
         let voxel = [step_xy as f32 * pixel_mm.x, step_xy as f32 * pixel_mm.y, step_z as f32 * layer_mm];
 
-        let (mut grid, lit) = Grid::sample(layers, resolution.x, bounds, step_xy, step_z);
-        let distance = squared_distance_to_outside(&lit, grid.size, voxel);
+        let (voxels, lit) = VoxelGrid::sample(layers, resolution.x, bounds, step_xy, step_z);
+        let distance = squared_distance_to_outside(&lit, voxels.size, voxel);
+        let mut grid = Grid {
+            voxels,
+            cavity: Vec::new(),
+            cavity_slabs: Vec::new(),
+        };
         let largest_voxel = voxel.into_iter().fold(0.0, f32::max);
         let threshold = (self.wall_thickness + largest_voxel).powi(2);
         grid.set_cavity(distance.into_iter().map(|d| d > threshold).collect());
@@ -215,135 +216,23 @@ impl Default for Hollow {
     }
 }
 
-/// The lit area of all layers: lowest and highest X, Y and layer index.
-#[derive(Clone, Copy)]
-struct Bounds {
-    low: Vector2<usize>,
-    high: Vector2<usize>,
-    first_layer: usize,
-    last_layer: usize,
-}
-
-/// Call `visit` with the row, the first column and the last column of each lit span of `runs`.
-fn for_each_lit_span(runs: &[Run], width: usize, mut visit: impl FnMut(usize, usize, usize, u8)) {
-    let mut position = 0usize;
-    for run in runs {
-        let end = position + run.length as usize;
-        if run.value != 0 {
-            let mut start = position;
-            while start < end {
-                let (row, column) = (start / width, start % width);
-                let last = (end - 1).min(row * width + width - 1);
-                visit(row, column, last % width, run.value);
-                start = last + 1;
-            }
-        }
-        position = end;
-    }
-}
-
-fn lit_bounds(layers: &[Layer], width: usize) -> Option<Bounds> {
-    let mut bounds: Option<Bounds> = None;
-    for (index, layer) in layers.iter().enumerate() {
-        for_each_lit_span(&layer.data, width, |row, first, last, _| {
-            let span_low = Vector2::new(first, row);
-            let span_high = Vector2::new(last, row);
-            bounds = Some(match bounds {
-                None => Bounds {
-                    low: span_low,
-                    high: span_high,
-                    first_layer: index,
-                    last_layer: index,
-                },
-                Some(b) => Bounds {
-                    low: b.low.inf(&span_low),
-                    high: b.high.sup(&span_high),
-                    first_layer: b.first_layer.min(index),
-                    last_layer: b.last_layer.max(index),
-                },
-            });
-        });
-    }
-    bounds
-}
-
 impl Grid {
-    /// Return an empty grid over `bounds` and the lit voxels of that grid.
-    ///
-    /// The grid has one unlit voxel of padding on each side. A voxel is lit
-    /// if the pixel at its center is lit, in the layer at its center.
-    fn sample(layers: &[Layer], width: usize, bounds: Bounds, step_xy: usize, step_z: usize) -> (Self, Vec<bool>) {
-        let span = bounds.high - bounds.low + Vector2::repeat(1);
-        let layer_count = bounds.last_layer - bounds.first_layer + 1;
-        let size = [
-            span.x.div_ceil(step_xy) + 2,
-            span.y.div_ceil(step_xy) + 2,
-            layer_count.div_ceil(step_z) + 2,
-        ];
-        let mut cells = vec![false; size[0] * size[1] * size[2]];
-
-        for k in 1..size[2] - 1 {
-            let layer = (bounds.first_layer + (k - 1) * step_z + step_z / 2).min(bounds.last_layer);
-            for_each_lit_span(&layers[layer].data, width, |row, first, last, _| {
-                if row < bounds.low.y || row > bounds.high.y {
-                    return;
-                }
-                let local_row = row - bounds.low.y;
-                let sample_row = ((local_row / step_xy) * step_xy + step_xy / 2).min(span.y - 1);
-                if sample_row != local_row {
-                    return;
-                }
-                let j = local_row / step_xy + 1;
-                let (first, last) = (first - bounds.low.x, last - bounds.low.x);
-                for i in (first / step_xy)..=(last / step_xy) {
-                    let center = (i * step_xy + step_xy / 2).min(span.x - 1);
-                    if center >= first && center <= last {
-                        cells[(k * size[1] + j) * size[0] + i + 1] = true;
-                    }
-                }
-            });
-        }
-
-        let grid = Self {
-            origin: bounds.low,
-            first_layer: bounds.first_layer,
-            step_xy,
-            step_z,
-            size,
-            cavity: Vec::new(),
-            cavity_slabs: Vec::new(),
-        };
-        (grid, cells)
-    }
-
     fn set_cavity(&mut self, cavity: Vec<bool>) {
-        let slab = self.size[0] * self.size[1];
+        let slab = self.voxels.size[0] * self.voxels.size[1];
         self.cavity_slabs = cavity.chunks(slab).map(|cells| cells.iter().any(|x| *x)).collect();
         self.cavity = cavity;
     }
 
     fn layer_has_cavity(&self, layer: usize) -> bool {
-        let Some(z) = layer.checked_sub(self.first_layer) else {
+        let Some(z) = layer.checked_sub(self.voxels.first_layer) else {
             return false;
         };
-        self.cavity_slabs.get(z / self.step_z + 1).copied().unwrap_or(false)
-    }
-
-    fn index(&self, i: usize, j: usize, k: usize) -> usize {
-        (k * self.size[1] + j) * self.size[0] + i
-    }
-
-    /// Return the voxel that holds the pixel at column `x`, row `y` of `layer`, or `None` outside the grid.
-    fn voxel_of(&self, x: usize, y: usize, layer: usize) -> Option<(usize, usize, usize)> {
-        let (x, y) = (x.checked_sub(self.origin.x)?, y.checked_sub(self.origin.y)?);
-        let z = layer.checked_sub(self.first_layer)?;
-        let (i, j, k) = (x / self.step_xy + 1, y / self.step_xy + 1, z / self.step_z + 1);
-        (i < self.size[0] - 1 && j < self.size[1] - 1 && k < self.size[2] - 1).then_some((i, j, k))
+        self.cavity_slabs.get(z / self.voxels.step_z + 1).copied().unwrap_or(false)
     }
 
     fn is_cavity(&self, x: usize, y: usize, layer: usize) -> bool {
-        self.voxel_of(x, y, layer)
-            .is_some_and(|(i, j, k)| self.cavity[self.index(i, j, k)])
+        self.voxels.voxel_of(x, y, layer)
+            .is_some_and(|(i, j, k)| self.cavity[self.voxels.index(i, j, k)])
     }
 
     /// Return the pixel center and the top layer of up to `count` drain holes.
@@ -353,15 +242,15 @@ impl Grid {
     /// voxel nearest to the middle of that layer. Each next hole is at the
     /// cavity voxel farthest from the holes before it.
     fn drain_hole_centers(&self, count: usize) -> Vec<(Vector2<f32>, usize)> {
-        let Some(k) = (1..self.size[2] - 1).find(|&k| {
-            (0..self.size[0] * self.size[1]).any(|cell| self.cavity[k * self.size[0] * self.size[1] + cell])
+        let Some(k) = (1..self.voxels.size[2] - 1).find(|&k| {
+            (0..self.voxels.size[0] * self.voxels.size[1]).any(|cell| self.cavity[k * self.voxels.size[0] * self.voxels.size[1] + cell])
         }) else {
             return Vec::new();
         };
 
-        let cells: Vec<Vector2<f32>> = (1..self.size[1] - 1)
-            .flat_map(|j| (1..self.size[0] - 1).map(move |i| (i, j)))
-            .filter(|&(i, j)| self.cavity[self.index(i, j, k)])
+        let cells: Vec<Vector2<f32>> = (1..self.voxels.size[1] - 1)
+            .flat_map(|j| (1..self.voxels.size[0] - 1).map(move |i| (i, j)))
+            .filter(|&(i, j)| self.cavity[self.voxels.index(i, j, k)])
             .map(|(i, j)| Vector2::new(i as f32, j as f32))
             .collect();
         let middle = cells.iter().sum::<Vector2<f32>>() / cells.len() as f32;
@@ -378,12 +267,12 @@ impl Grid {
             chosen.extend(next);
         }
 
-        let top_layer = self.first_layer + (k - 1) * self.step_z + self.step_z / 2;
+        let top_layer = self.voxels.first_layer + (k - 1) * self.voxels.step_z + self.voxels.step_z / 2;
         chosen
             .into_iter()
             .map(|cell| {
-                let center = cell.map(|v| (v - 1.0) * self.step_xy as f32 + self.step_xy as f32 / 2.0);
-                (center + self.origin.cast::<f32>(), top_layer)
+                let center = cell.map(|v| (v - 1.0) * self.voxels.step_xy as f32 + self.voxels.step_xy as f32 / 2.0);
+                (center + self.voxels.origin.cast::<f32>(), top_layer)
             })
             .collect()
     }
@@ -402,7 +291,7 @@ impl Grid {
         }
         let in_pillar = |x: usize, y: usize| {
             pillars.is_some_and(|(spacing, size)| {
-                (x - self.origin.x) % spacing < size && (y - self.origin.y) % spacing < size
+                (x - self.voxels.origin.x) % spacing < size && (y - self.voxels.origin.y) % spacing < size
             })
         };
         let in_hole = |x: usize, y: usize| {

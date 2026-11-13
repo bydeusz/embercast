@@ -13,9 +13,9 @@ const SAMPLE_OFFSETS = array(
 
 const ANNOTATION_COLORS = array(
     vec3f(1.000, 1.000, 1.000), // (00) No annotation
-    vec3f(0.624, 0.176, 0.212), // (01) Island
-    vec3f(1.000, 1.000, 1.000), // (10) Unused
-    vec3f(1.000, 1.000, 1.000), // (11) Unused
+    vec3f(0.620, 0.169, 0.145), // (01) Island
+    vec3f(0.851, 0.396, 0.361), // (10) Resin trap
+    vec3f(0.820, 0.545, 0.173), // (11) Suction cup
 );
 
 struct Context {

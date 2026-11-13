@@ -24,6 +24,8 @@ use crate::{
 };
 
 pub mod annotations;
+#[cfg(test)]
+mod annotations_tests;
 pub mod result;
 pub mod runner;
 

@@ -91,6 +91,10 @@ pub struct Args {
     #[arg(long, default_value_t = 0.0)]
     pub pillar_spacing: f32,
 
+    /// Print the resin traps and suction cups of the sliced layers.
+    #[arg(long)]
+    pub analyze: bool,
+
     #[arg(long)]
     /// Path to a preview image, will be scaled as needed.
     pub preview: Option<PathBuf>,
