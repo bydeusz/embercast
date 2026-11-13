@@ -8,7 +8,8 @@ use egui::{
     Sense, TextEdit, Ui, UiBuilder, Widget, text::CCursorRange, vec2,
 };
 use egui_phosphor::regular::{
-    ARROW_LINE_DOWN, ARROWS_COUNTER_CLOCKWISE, BANDAIDS, COPY, CUBE, CURSOR_TEXT, DICE_THREE, EYE,
+    ARROW_LINE_DOWN, ARROWS_COUNTER_CLOCKWISE, BANDAIDS, COMPASS, COPY, CUBE, CURSOR_TEXT,
+    DICE_THREE, EYE,
     EYE_SLASH, FLOPPY_DISK_BACK, FOLDER_DASHED, INFO, LINE_SEGMENT, LINK_BREAK, LINK_SIMPLE,
     SUBTRACT_SQUARE, SWAP, TRASH, VECTOR_THREE, WARNING,
 };
@@ -29,11 +30,12 @@ use crate::{
         keybinds::Keybind,
         panels::models::{UiAction, shortcut},
     },
-    task::{FileDialog, FlipWinding, MeshRepair, MeshSave, ReloadModel, SplitBodies},
+    task::{AutoOrient, FileDialog, FlipWinding, MeshRepair, MeshSave, ReloadModel, SplitBodies},
 };
 
 const WARN_DEFECTIVE: &str = "This mesh is defective, it may produce unexpected results when sliced.\nConsider running it through a mesh repair tool.";
 const WARN_OUT_OF_BOUNDS: &str = "This mesh extends beyond the printer volume and will be cut off.";
+const AUTO_ORIENT_TIP: &str = "Turns the model so that the least area needs supports, and puts it on the build plate. With equal supports, the lower orientation wins.";
 const SUPPORTABLE_TIP: &str =
     "Acceleration structures have been built for this mesh.\nSupports can be placed or generated.";
 const UNIT_TIP: &str = "Common polygon mesh formats like .stl and .obj don't include unit information. For this reason you need to manually specify the units for each mesh, although Millimeters, the default, is often correct.";
@@ -192,6 +194,14 @@ pub fn model_properties(
 
             model.align_to_bed();
             model.update_oob(platform);
+        }
+
+        if ui
+            .button(concatcp!(COMPASS, " Auto Orient"))
+            .on_hover_text(AUTO_ORIENT_TIP)
+            .clicked()
+        {
+            app.tasks.add(AutoOrient::new(model));
         }
 
         if ui.button(concatcp!(SWAP, " Replace")).clicked() {

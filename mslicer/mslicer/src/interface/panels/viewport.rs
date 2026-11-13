@@ -13,7 +13,7 @@ use crate::{
         project::model::Model,
         state::{GeometryHit, Tool, WorkspaceHover},
     },
-    interface::{components::grid, panels::supports::manual_support_placement},
+    interface::{components::grid, panels::supports::manual_support_placement, theme},
     render::{
         interface::basis::BasisRenderCallback,
         workspace::{WorkspaceRenderCallback, model::pick::pick_selection},
@@ -115,7 +115,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, ctx: &Context) {
 
     let painter = ui.painter();
     let color = match app.config.ui.theme {
-        Theme::Dark => Color32::from_rgb(9, 9, 9),
+        Theme::Dark => theme::color::BG_BASE,
         Theme::Light => Color32::from_rgb(255, 255, 255),
     };
     painter.rect_filled(rect, 0.0, color);
