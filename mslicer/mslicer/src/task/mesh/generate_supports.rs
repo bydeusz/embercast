@@ -4,6 +4,7 @@ use nalgebra::Vector3;
 use tools::supports::{
     auto::{AutoPlacement, PlacementConfig},
     mesh::SupportPreset,
+    set::Pose,
 };
 
 use crate::{
@@ -16,6 +17,7 @@ type RoutedSupports = Vec<[Vector3<f32>; 3]>;
 pub struct GenerateSupports {
     model: ModelId,
     preset: SupportPreset,
+    made_for: Pose,
 
     progress: Progress,
     handle: TaskThread<RoutedSupports>,
@@ -38,6 +40,7 @@ impl GenerateSupports {
             return Some(Self {
                 model: model.id,
                 preset: support,
+                made_for: Pose::of(&model.mesh),
 
                 handle: TaskThread::spawn(clone!([progress], move || {
                     generator.generate_supports(&mesh, &half_ege, &bvh, &progress)
@@ -56,7 +59,7 @@ impl Task for GenerateSupports {
             .poll(app, "Failed to Generate Supports")
             .into_poll_result(|supports| {
                 if let Some(model) = app.project.model(self.model) {
-                    model.supports.replace_auto(&self.preset, supports);
+                    model.supports.replace_auto(&self.preset, supports, self.made_for);
                 }
 
                 PollResult::complete()

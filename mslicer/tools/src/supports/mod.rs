@@ -3,7 +3,9 @@ use nalgebra::Vector3;
 
 pub mod auto;
 pub mod mesh;
+pub mod set;
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Support {
     pub id: SupportId,
     pub points: [Vector3<f32>; 3],

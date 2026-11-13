@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use common::units::Milimeter;
+use common::units::{Milimeter, Milimeters};
 use const_format::concatcp;
 use egui::{Button, ComboBox, Context, DragValue, Ui, Widget};
 use egui_phosphor::regular::{LINE_SEGMENT, SELECTION_INVERSE, SPARKLE, TRASH};
@@ -13,7 +13,7 @@ use crate::{
     task::{BuildAccelerationStructures, GenerateSupports},
 };
 
-const IN_DEV_WARNING: &str = "Support generation and placement is still in development. For the time being consider using RuneBrace for support placement.\n\nAt the moment supports are not saved into the project file!";
+const SUPPORT_NOTE: &str = "Supports are saved in the project file. They move with their model. Rotating or scaling a model removes its supports.\n\nThe preset applies to new supports only.";
 
 pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     ui.horizontal_wrapped(|ui| {
@@ -77,30 +77,41 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     }
 
     ui.collapsing("Support", |ui| {
-        ui.label("Preset");
-        ui.horizontal(|ui| {
-            ComboBox::from_id_salt("preset")
-                .selected_text("todo")
-                .show_ui(ui, |ui| {
-                    ui.selectable_value(
-                        &mut app.project.support_config.preset,
-                        SupportPreset::LIGHT,
-                        "Light",
-                    );
-                    ui.selectable_value(
-                        &mut app.project.support_config.preset,
-                        SupportPreset::MDEIUM,
-                        "Medium",
-                    );
-                    ui.selectable_value(
-                        &mut app.project.support_config.preset,
-                        SupportPreset::HEAVY,
-                        "Heavy",
-                    );
-                });
-            ui.take_available_width();
+        grid("support_preset").show(ui, |ui| {
+            let preset = &mut app.project.support_config.preset;
+            ui.label("Preset");
+            ui.horizontal(|ui| {
+                ComboBox::from_id_salt("preset")
+                    .selected_text(preset.name().unwrap_or("Custom"))
+                    .show_ui(ui, |ui| {
+                        for (name, value) in SupportPreset::NAMED {
+                            ui.selectable_value(preset, value, name);
+                        }
+                    });
+                ui.take_available_width();
+            });
+            ui.end_row();
+
+            ui.label("Tip Diameter");
+            diameter(ui, &mut preset.tip_radius);
+            ui.end_row();
+
+            ui.label("Tip Length");
+            preset.tip_length.with::<Milimeter, _>(|x| {
+                DragValue::new(x).suffix(" mm").speed(0.05).range(0.1..=20.0).ui(ui);
+            });
+            ui.end_row();
+
+            ui.label("Body Diameter");
+            diameter(ui, &mut preset.radius);
+            ui.end_row();
+
+            ui.label("Clearance");
+            preset.margin.with::<Milimeter, _>(|x| {
+                DragValue::new(x).suffix(" mm").speed(0.05).range(0.0..=10.0).ui(ui);
+            });
+            ui.end_row();
         });
-        ui.end_row();
     });
 
     let config = &mut app.project.support_config.auto_placement;
@@ -171,7 +182,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     ui.add_space(4.0);
     ui.separator();
     ui.add_space(4.0);
-    ui.label(IN_DEV_WARNING);
+    ui.label(SUPPORT_NOTE);
 }
 
 fn generate_support(app: &mut App, model: usize) {
@@ -243,6 +254,19 @@ pub fn manual_support_placement(app: &mut App, clicked: bool) {
     }
 
     app.state.support_preview = (!builder.is_empty()).then(|| builder.build());
+}
+
+/// Show a drag value for the diameter that belongs to `radius`, and write a changed value back to `radius`.
+fn diameter(ui: &mut Ui, radius: &mut Milimeters) {
+    let mut value = radius.get::<Milimeter>() * 2.0;
+    let response = DragValue::new(&mut value)
+        .suffix(" mm")
+        .speed(0.01)
+        .range(0.05..=10.0)
+        .ui(ui);
+    if response.changed() {
+        *radius = Milimeters::new(value / 2.0);
+    }
 }
 
 fn prepare(app: &mut App, ui: &mut Ui) {

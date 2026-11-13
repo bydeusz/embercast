@@ -8,16 +8,22 @@ use common::{
     id_type,
     progress::CombinedProgress,
     slice::{Layer, SliceConfig},
-    units::Milimeters,
+    units::{Milimeter, Milimeters},
 };
 use slicer::post_process::{
     elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
 };
-use tools::supports::{auto::PlacementConfig, mesh::SupportPreset};
+use tools::supports::{
+    auto::PlacementConfig,
+    mesh::{Raft, SupportPreset},
+};
 
 pub mod model;
 pub mod storage;
 pub mod supports;
+
+#[cfg(test)]
+mod storage_tests;
 
 #[derive(Default, Clone)]
 pub struct Project {
@@ -91,7 +97,11 @@ impl Project {
 
     pub fn update(&mut self) {
         let res = self.support_config.mesh_resolution;
-        (self.models.iter_mut()).for_each(|x| x.supports.set_resolution(res));
+        let raft = self.support_config.raft();
+        for model in self.models.iter_mut() {
+            model.supports.set_resolution(res);
+            model.supports.set_raft(raft);
+        }
     }
 }
 
@@ -164,11 +174,21 @@ impl PartialEq for Collection {
     }
 }
 
+impl SupportConfig {
+    /// Return the raft settings in millimeters.
+    pub fn raft(&self) -> Raft {
+        Raft {
+            height: self.raft_height.get::<Milimeter>(),
+            offset: self.raft_offset.get::<Milimeter>(),
+        }
+    }
+}
+
 impl Default for SupportConfig {
     fn default() -> Self {
         Self {
             auto_placement: PlacementConfig::default(),
-            preset: SupportPreset::MDEIUM,
+            preset: SupportPreset::MEDIUM,
             mesh_resolution: 20,
 
             default_lift: Milimeters::new(5.0),

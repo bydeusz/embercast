@@ -15,6 +15,7 @@ use slicer::geometry::{
     mesh::{HalfEdgeMesh, Mesh},
     partitioning::Bvh,
 };
+use tools::supports::set::Pose;
 
 use crate::{
     core::project::{CollectionId, RenameState, supports::Supports},
@@ -78,7 +79,7 @@ impl Model {
             base_volume: None,
             bvh: None,
             half_edge: None,
-            supports: Supports::default(),
+            supports: Supports::new(Pose::of(&mesh)),
             bounds: Bounds3D::from_mesh(&mesh),
             mesh,
 
@@ -175,6 +176,7 @@ impl Model {
         self.mesh.set_scale_unchecked(scale);
         self.mesh.set_rotation_unchecked(rotation);
         self.mesh.update_transformation_matrix();
+        self.supports.clear();
 
         self.file = file;
         self.warnings = MeshWarnings::empty();
@@ -201,6 +203,7 @@ impl Model {
 
         let pos = self.mesh.position() - Vector3::z() * min.z;
         self.mesh.set_position(pos);
+        self.supports.set_transform(pos, self.mesh.scale(), self.mesh.rotation());
     }
 
     pub fn update_oob(&mut self, platform: &Vector3<Milimeters>) {
@@ -318,7 +321,7 @@ impl Clone for Model {
             bounds: self.bounds.clone(),
             bvh: self.bvh.clone(),
             half_edge: self.half_edge.clone(),
-            supports: Supports::default(),
+            supports: Supports::new(Pose::of(&self.mesh)),
             base_volume: self.base_volume,
 
             unit: self.unit,
