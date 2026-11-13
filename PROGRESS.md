@@ -51,8 +51,8 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 | 2 | Printer-preset Halot One Plus + Siraya Build | klaar |
 | 3 | Supports verbeteren | gebouwd, wacht op testprint 2 |
 | 4 | Hollowing + drain holes | gebouwd, wacht op testprint 3 |
-| 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | bezig |
-| 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | open |
+| 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | klaar |
+| 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | bezig |
 | 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | open |
 
 ## Wat af is
@@ -79,13 +79,21 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
   - In de app: paneel Slice Config, Post Processors, "Hollowing". Undo werkt, en de instellingen staan in het projectbestand (versie 18).
   - CLI: `--hollow <wand mm> --drain-holes <aantal> --drain-hole-diameter <mm> --pillar-spacing <mm>`.
 
+- Stap 5, analyse:
+  - Na het slicen staat bovenin de knop "Check Print". Die zoekt eilanden (bestond al in mslicer), harsvallen en zuignappen (nieuw, `mslicer/slicer/src/post_process/cavities.rs`).
+  - Harsval: lege ruimte zonder uitweg. Zuignap: lege ruimte die alleen naar de FEP open is. De bouwplaat telt als dicht als de print op laag 0 begint.
+  - In de laagvoorvertoning en op de laagschuif: eiland donkerrood (crimson-500), harsval lichtrood (crimson-300), zuignap amber (gold-500). Onder "Analysis, Print Check" staat per probleem in woorden wat er is, met een link naar de eerste laag.
+  - Overhangkleuring in de 3D-weergave staat nu standaard aan (30°), in te stellen in het paneel Workspace.
+  - De laagvoorvertoning bestond al in mslicer.
+  - CLI: `--analyze` drukt de gevonden holtes af.
+
 ## Nu bezig
 
-Stap 5: analyse (islands, resin traps, overhangs, laagvoorvertoning).
+Stap 6: interface in de Dark Fantasy-stijl en hernoemen naar Embercast.
 
 ## Volgende stap
 
-Stap 6: interface in de Dark Fantasy-stijl en hernoemen naar Embercast.
+Stap 7: auto-orient, auto-layout, meerdere bouwplaten, tekstlabels, modelreparatie, meetgereedschap.
 
 ## Hoe maak je het testbestand opnieuw
 
@@ -133,6 +141,7 @@ mslicer/target/release/slicer --mesh testprints/embercast-test-2.stl testprints/
 - 2026-11-13: het inlezen van `.cxdlp` controleert vóór elk blok of er genoeg bytes zijn, zodat een kapot bestand een foutmelding geeft en de app niet laat crashen.
 - 2026-11-13: supports worden opgeslagen ten opzichte van de positie van het model (`tools/src/supports/set.rs`). Bij een andere schaal of draaiing vervallen ze, in plaats van dat ik ze probeer mee te draaien.
 - 2026-11-13: hollowing gebeurt op de gesneden lagen en niet op het 3D-model. Zo blijft het oppervlak van het model precies zoals het was, en kunnen gaten en holtes geen kapotte mesh opleveren. Nadeel: hollowing geldt voor alles op de plaat, niet per model, en je ziet de holte pas na het slicen in de laagvoorvertoning.
+- 2026-11-13: harsvallen en zuignappen worden op een raster van ongeveer 0,1 mm gezocht (grover bij hele grote prints, hooguit 40 miljoen voxels). Holtes kleiner dan 0,2 mm³ worden niet gemeld.
 - 2026-11-13: preset bepaalt de vorm van een support, de dichtheid staat apart onder "Auto Placement". Zo blijven de twee los te regelen.
 
 ## Bekende beperkingen
