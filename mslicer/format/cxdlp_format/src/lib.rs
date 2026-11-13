@@ -15,6 +15,7 @@ mod header;
 mod layer;
 mod preview;
 mod printer;
+mod reader;
 mod strings;
 
 pub use area::{Span, largest_enclosed_area};

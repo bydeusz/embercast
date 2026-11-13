@@ -2,11 +2,14 @@ use anyhow::{Result, ensure};
 use common::serde::{Deserializer, Serializer, SliceDeserializer};
 
 use crate::{
-    MAGIC, PAGE_BREAK, VERSION,
+    MAGIC, MAX_HEIGHT, MAX_WIDTH, PAGE_BREAK, VERSION,
+    reader::{ensure_remaining, expect_page_break},
     strings::{read_terminated, read_utf16, write_terminated, write_utf16},
 };
 
 const HEADER_PADDING: usize = 64;
+const SLICER_INFO_NUMBERS_SIZE: usize = 11 * 2;
+const SLICER_INFO_V3_NUMBERS_SIZE: usize = 1 + 4 + 4 + 1 + 2 + 1 + 2 + 5;
 
 /// The first block of the file: magic, version, printer model and resolution.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -85,18 +88,24 @@ impl Header {
     }
 
     pub fn deserialize(des: &mut SliceDeserializer) -> Result<Self> {
+        ensure_remaining(des, 4 + MAGIC.len() + 2, "header")?;
         ensure!(des.read_u32_be() == MAGIC.len() as u32, "Not a CXDLP file: wrong magic size.");
         ensure!(des.read_slice(MAGIC.len()) == MAGIC, "Not a CXDLP file: wrong magic.");
         let version = des.read_u16_be();
         ensure!(matches!(version, 2 | 3), "CXDLP version {version} is not supported.");
+        let printer_model = read_terminated(des)?;
+        ensure_remaining(des, 6 + HEADER_PADDING, "header")?;
         let header = Self {
             version,
-            printer_model: read_terminated(des)?,
+            printer_model,
             layer_count: des.read_u16_be(),
             resolution_x: des.read_u16_be(),
             resolution_y: des.read_u16_be(),
         };
         des.advance_by(HEADER_PADDING);
+        let (x, y) = (header.resolution_x as u32, header.resolution_y as u32);
+        ensure!((1..=MAX_WIDTH).contains(&x), "Resolution X of {x} is not supported.");
+        ensure!((1..=MAX_HEIGHT).contains(&y), "Resolution Y of {y} is not supported.");
         Ok(header)
     }
 }
@@ -128,7 +137,10 @@ impl SlicerInfo {
             display_width: read_utf16(des)?,
             display_height: read_utf16(des)?,
             layer_height: read_utf16(des)?,
-            exposure_time: des.read_u16_be(),
+            exposure_time: {
+                ensure_remaining(des, SLICER_INFO_NUMBERS_SIZE, "slicer info")?;
+                des.read_u16_be()
+            },
             wait_time_before_cure: des.read_u16_be(),
             bottom_exposure_time: des.read_u16_be(),
             bottom_layers: des.read_u16_be(),
@@ -166,7 +178,10 @@ impl SlicerInfoV3 {
         let info = Self {
             software_name: read_terminated(des)?,
             material_name: read_terminated(des)?,
-            distortion_compensation_enabled: des.read_u8(),
+            distortion_compensation_enabled: {
+                ensure_remaining(des, SLICER_INFO_V3_NUMBERS_SIZE, "slicer info v3")?;
+                des.read_u8()
+            },
             distortion_compensation_thickness: des.read_u32_le(),
             distortion_compensation_focal_length: des.read_u32_le(),
             xy_profile_compensation_enabled: des.read_u8(),
@@ -179,7 +194,7 @@ impl SlicerInfoV3 {
             image_blur_enabled: des.read_u8(),
             image_blur_level: des.read_u8(),
         };
-        ensure!(des.read_slice(PAGE_BREAK.len()) == PAGE_BREAK, "Slicer info does not end with a page break.");
+        expect_page_break(des, "slicer info v3")?;
         Ok(info)
     }
 }

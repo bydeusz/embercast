@@ -178,3 +178,33 @@ fn raw_crc_starts_at_zero_and_uses_the_reflected_polynomial() {
     let xored: Vec<u8> = a.iter().zip(b).map(|(x, y)| x ^ y).collect();
     assert_eq!(crc32_raw(&xored), crc32_raw(a) ^ crc32_raw(b));
 }
+
+/// Return `body` with a valid version 3 checksum at the end.
+fn with_checksum(body: &[u8]) -> Vec<u8> {
+    let mut bytes = body.to_vec();
+    bytes.extend_from_slice(&crc32_raw(body).to_be_bytes());
+    bytes
+}
+
+#[test]
+fn cut_file_with_a_valid_checksum_gives_an_error_and_no_crash() {
+    let bytes = serialize(&sample_file());
+    let body = &bytes[..bytes.len() - 4];
+    let cuts = (20..body.len()).step_by(997).chain([body.len() - 1, body.len() - 20]);
+    for cut in cuts {
+        let damaged = with_checksum(&body[..cut]);
+        let result = File::deserialize(&mut SliceDeserializer::new(&damaged));
+        assert!(result.is_err(), "A file cut at byte {cut} was accepted.");
+    }
+}
+
+#[test]
+fn zero_resolution_gives_an_error() {
+    let bytes = serialize(&sample_file());
+    let mut body = bytes[..bytes.len() - 4].to_vec();
+    let resolution_x = 4 + MAGIC.len() + 2 + 4 + "CL-79".len() + 1 + 2;
+    assert_eq!(&body[resolution_x..resolution_x + 2], &4320u16.to_be_bytes());
+    body[resolution_x..resolution_x + 2].copy_from_slice(&[0, 0]);
+    let error = File::deserialize(&mut SliceDeserializer::new(&with_checksum(&body))).err().unwrap();
+    assert!(error.to_string().contains("Resolution X"));
+}

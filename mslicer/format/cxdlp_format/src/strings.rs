@@ -1,6 +1,8 @@
 use anyhow::{Result, ensure};
 use common::serde::{Deserializer, Serializer, SliceDeserializer};
 
+use crate::reader::ensure_remaining;
+
 /// Write `value` as a big endian `u32` length, the UTF-8 bytes and a null byte.
 ///
 /// An empty `value` becomes a zero length with no bytes, as UVtools writes it.
@@ -16,8 +18,9 @@ pub fn write_terminated(ser: &mut impl Serializer, value: &str) {
 
 /// Read a string that [`write_terminated`] wrote, without its null bytes.
 pub fn read_terminated(des: &mut SliceDeserializer) -> Result<String> {
+    ensure_remaining(des, 4, "string length")?;
     let length = des.read_u32_be() as usize;
-    ensure!(length <= des.size() - des.pos(), "String length is past the end of the file.");
+    ensure_remaining(des, length, "string")?;
     let bytes = des.read_slice(length);
     let text = String::from_utf8_lossy(bytes);
     Ok(text.trim_end_matches('\0').to_owned())
@@ -34,9 +37,10 @@ pub fn write_utf16(ser: &mut impl Serializer, value: &str) {
 
 /// Read a string that [`write_utf16`] wrote.
 pub fn read_utf16(des: &mut SliceDeserializer) -> Result<String> {
+    ensure_remaining(des, 4, "string length")?;
     let length = des.read_u32_be() as usize;
     ensure!(length % 2 == 0, "UTF-16 string has an odd byte length.");
-    ensure!(length <= des.size() - des.pos(), "String length is past the end of the file.");
+    ensure_remaining(des, length, "string")?;
     let units: Vec<u16> = (0..length / 2).map(|_| des.read_u16_be()).collect();
     Ok(String::from_utf16(&units)?)
 }

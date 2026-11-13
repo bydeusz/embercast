@@ -16,6 +16,7 @@ use crate::{
     VERSION,
     checksum::{crc32_raw, xor_checksum},
     decode_lines,
+    reader::{ensure_remaining, expect_page_break},
     strings::format_decimal,
 };
 
@@ -148,17 +149,20 @@ impl File {
             ensure!(stored as u8 == expected, "Checksum is {stored:#04x}, expected {expected:#04x}.");
         }
 
+        ensure_remaining(des, 116 * 116 * 2, "small preview")?;
         let small_preview = PreviewImage::deserialize(des);
-        ensure!(des.read_slice(PAGE_BREAK.len()) == PAGE_BREAK, "Preview does not end with a page break.");
+        expect_page_break(des, "small preview")?;
         let mut large_previews = [PreviewImage::empty(), PreviewImage::empty()];
         for preview in &mut large_previews {
+            ensure_remaining(des, 290 * 290 * 2, "large preview")?;
             *preview = PreviewImage::deserialize(des);
-            ensure!(des.read_slice(PAGE_BREAK.len()) == PAGE_BREAK, "Preview does not end with a page break.");
+            expect_page_break(des, "large preview")?;
         }
 
         let slicer_info = SlicerInfo::deserialize(des)?;
+        ensure_remaining(des, header.layer_count as usize * 4, "layer area table")?;
         des.advance_by(header.layer_count as usize * 4);
-        ensure!(des.read_slice(PAGE_BREAK.len()) == PAGE_BREAK, "Layer area table does not end with a page break.");
+        expect_page_break(des, "layer area table")?;
         let slicer_info_v3 = if header.version >= 3 {
             SlicerInfoV3::deserialize(des)?
         } else {
@@ -177,6 +181,7 @@ impl File {
             layers.push(layer);
         }
 
+        ensure_remaining(des, 4 + MAGIC.len(), "footer")?;
         ensure!(des.read_u32_be() == MAGIC.len() as u32, "Footer has the wrong magic size.");
         ensure!(des.read_slice(MAGIC.len()) == MAGIC, "Footer has the wrong magic.");
 

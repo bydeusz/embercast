@@ -1,7 +1,10 @@
-use anyhow::{Result, bail, ensure};
+use anyhow::{Result, bail};
 use common::serde::{Deserializer, Serializer, SliceDeserializer};
 
-use crate::PAGE_BREAK;
+use crate::{
+    PAGE_BREAK,
+    reader::{ensure_remaining, expect_page_break},
+};
 
 /// One vertical line of pixels with one gray value.
 ///
@@ -64,21 +67,20 @@ impl Layer {
     }
 
     pub fn deserialize(des: &mut SliceDeserializer) -> Result<Self> {
+        ensure_remaining(des, 8, "layer header")?;
         let largest_area = des.read_u32_be();
         let line_count = des.read_u32_be() as usize;
-        let byte_count = line_count
-            .checked_mul(Line::SIZE)
-            .filter(|count| *count + PAGE_BREAK.len() <= des.size() - des.pos());
-        let Some(byte_count) = byte_count else {
-            bail!("Layer line data is past the end of the file.");
+        let Some(byte_count) = line_count.checked_mul(Line::SIZE) else {
+            bail!("Layer has too many lines: {line_count}.");
         };
+        ensure_remaining(des, byte_count, "layer lines")?;
 
         let lines = des
             .read_slice(byte_count)
             .chunks_exact(Line::SIZE)
             .map(Line::from_bytes)
             .collect();
-        ensure!(des.read_slice(PAGE_BREAK.len()) == PAGE_BREAK, "Layer does not end with a page break.");
+        expect_page_break(des, "layer")?;
 
         Ok(Self {
             largest_area,
