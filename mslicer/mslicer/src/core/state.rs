@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use common::color::SRgb;
 use egui::Vec2;
-use egui_phosphor::regular::{CURSOR_CLICK, LINE_SEGMENT, TRIANGLE};
+use egui_phosphor::regular::{CURSOR_CLICK, LINE_SEGMENT, RULER, TRIANGLE};
 use egui_tracing::EventCollector;
 use nalgebra::{Matrix4, Vector2, Vector3};
 use slicer::geometry::mesh::Mesh;
@@ -11,6 +11,7 @@ use wgpu::Device;
 use crate::{
     core::{
         config::peripherals::Webhook,
+        measure::Measurement,
         project::model::{Model, ModelId},
         selected::{SelectedModel, SelectedPrinter, SelectedSupports},
     },
@@ -27,6 +28,7 @@ pub struct UiState {
     pub queue_reset_ui: bool,
     pub line_support_debug: Vec<[Vector3<f32>; 2]>,
     pub tool: Tool,
+    pub measure: Measurement,
 
     // support stuff
     pub workspace: WorkspaceHover,
@@ -85,6 +87,7 @@ pub enum Tool {
     Select,
     Support,
     Orient,
+    Measure,
 }
 
 #[derive(Default)]
@@ -152,13 +155,14 @@ impl PreviewMode {
 }
 
 impl Tool {
-    pub const ALL: [Self; 3] = [Self::Select, Self::Support, Self::Orient];
+    pub const ALL: [Self; 4] = [Self::Select, Self::Support, Self::Orient, Self::Measure];
 
     pub fn keybind(&self) -> Keybind {
         match self {
             Tool::Select => Keybind::Pointer,
             Tool::Support => Keybind::Support,
             Tool::Orient => Keybind::Orient,
+            Tool::Measure => Keybind::Measure,
         }
     }
 
@@ -167,6 +171,7 @@ impl Tool {
             Tool::Select => CURSOR_CLICK,
             Tool::Support => LINE_SEGMENT,
             Tool::Orient => TRIANGLE,
+            Tool::Measure => RULER,
         }
     }
 
@@ -175,6 +180,7 @@ impl Tool {
             Tool::Select => "Select (Default)",
             Tool::Support => "Support Placement",
             Tool::Orient => "Orient to Face",
+            Tool::Measure => "Measure Distance",
         }
     }
 }

@@ -59,6 +59,7 @@ keybinds![
     (pointer, Pointer, "Pointer") => (Modifiers::NONE, Key::Num1),
     (support, Support, "Support") => (Modifiers::NONE, Key::Num2),
     (orient, Orient, "Orient") => (Modifiers::NONE, Key::Num3),
+    (measure, Measure, "Measure") => (Modifiers::NONE, Key::Num4),
 
     (delete, Delete, "Delete") => (Modifiers::NONE, Key::D),
     (collect, Collect, "Collect") => (Modifiers::NONE, Key::G),
@@ -152,7 +153,7 @@ impl Keybinds {
         self.shortcut_section(ui, "General", &[ImportModel, ImportSliced,
             LoadTeapot, SaveProject, SaveAsProject, NewProject, LoadProject,
             Quit, Slice, Undo, Redo, Layout, SelectAll, SelectNone]);
-        self.shortcut_section(ui, "Tools", &[Pointer, Support, Orient]);
+        self.shortcut_section(ui, "Tools", &[Pointer, Support, Orient, Measure]);
         self.shortcut_section(ui, "Selection", &[Delete, Collect, Duplicate,
             Rename, Hide, Select, Align, Split]);
     }

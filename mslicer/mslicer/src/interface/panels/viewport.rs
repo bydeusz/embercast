@@ -97,6 +97,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, ctx: &Context) {
                     app.tasks.add(BuildAccelerationStructures::new(model));
                 }
             }
+            Tool::Measure => measure_click(app),
             Tool::Orient => {
                 let platform = app.project.slice_config.platform_size;
                 if let Some(hover) = app.state.hovered_geometry
@@ -128,6 +129,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, ctx: &Context) {
     paint_area_selection(painter, app, &rect, px);
     paint_basis_vectors(painter, app, &rect);
     paint_toolbar(app, ctx, &rect);
+    paint_measurement(app, ctx, &rect);
 
     // Can't just use `response.contains_pointer()` since the hover overlay can
     // take focus away from the viewport.
@@ -138,6 +140,63 @@ pub fn ui(app: &mut App, ui: &mut Ui, ctx: &Context) {
     {
         paint_hover_overlay(ui, app, hover, px);
     }
+}
+
+/// Add the point under the pointer to the measurement, on the nearest model that has its search structure.
+///
+/// A model without the structure gets a task that builds it, so a second click works.
+fn measure_click(app: &mut App) {
+    let Some((origin, direction)) = app.hovered_ray() else {
+        return;
+    };
+    let mut nearest: Option<(f32, Vector3<f32>)> = None;
+    for model in app.project.models.iter().filter(|model| !model.hidden) {
+        let Some(bvh) = model.bvh.as_ref() else {
+            continue;
+        };
+        if let Some(hit) = bvh.intersect_ray(&model.mesh, origin, direction) {
+            let point = model.mesh.transform(&hit.position);
+            let distance = (point - origin).norm();
+            if nearest.is_none_or(|(best, _)| distance < best) {
+                nearest = Some((distance, point));
+            }
+        }
+    }
+
+    if let Some((_, point)) = nearest {
+        app.state.measure.add(point);
+    } else if let Some(hover) = app.state.hovered_geometry
+        && let Some(model) = app.project.model(hover.model)
+        && !model.has_acceleration_structures()
+    {
+        app.tasks.add(BuildAccelerationStructures::new(model));
+    }
+}
+
+/// Show the measured distance in words at the bottom left of the viewport, with a button to clear it.
+fn paint_measurement(app: &mut App, ctx: &Context, rect: &Rect) {
+    if app.state.tool != Tool::Measure {
+        return;
+    }
+    Area::new(Id::new("measurement"))
+        .anchor(Align2::LEFT_BOTTOM, Vec2::new(10.0, -10.0))
+        .constrain_to(*rect)
+        .show(ctx, |ui| {
+            Frame::window(ui.style()).show(ui, |ui| {
+                let text = match (app.state.measure.points().len(), app.state.measure.distance()) {
+                    (_, Some((distance, delta))) => format!(
+                        "Distance {distance:.2} mm\nX {:.2} · Y {:.2} · Z {:.2} mm",
+                        delta.x, delta.y, delta.z
+                    ),
+                    (1, None) => "Click a second point on a model.".to_owned(),
+                    _ => "Click a point on a model to start measuring.".to_owned(),
+                };
+                ui.label(text);
+                if !app.state.measure.points().is_empty() && ui.button("Clear").clicked() {
+                    app.state.measure.clear();
+                }
+            });
+        });
 }
 
 fn paint_area_selection(painter: &Painter, app: &mut App, rect: &Rect, px: Pos2) {

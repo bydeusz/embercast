@@ -22,7 +22,8 @@ use crate::{
         util::ResizingBuffer,
         workspace::line::{
             bounding_box::BoundingBoxDispatch, build_plate::BuildPlateDispatch,
-            line_support_debug::LineSupportDebugDispatch, normals::NormalsDispatch,
+            line_support_debug::LineSupportDebugDispatch, measure::MeasureDispatch,
+            normals::NormalsDispatch,
         },
     },
 };
@@ -30,6 +31,7 @@ use crate::{
 mod bounding_box;
 mod build_plate;
 mod line_support_debug;
+mod measure;
 mod normals;
 
 const VERTEX_BUFFER_LAYOUT: VertexBufferLayout = VertexBufferLayout {
@@ -55,6 +57,7 @@ pub struct LineDispatch {
     bounding_box: BoundingBoxDispatch,
     build_plate: BuildPlateDispatch,
     line_support_debug: LineSupportDebugDispatch,
+    measure: MeasureDispatch,
     normals: NormalsDispatch,
 }
 
@@ -102,6 +105,7 @@ impl LineDispatch {
             bounding_box: BoundingBoxDispatch::new(),
             build_plate: BuildPlateDispatch::new(),
             line_support_debug: LineSupportDebugDispatch::new(),
+            measure: MeasureDispatch::new(),
             normals: NormalsDispatch::new(),
         }
     }
@@ -111,6 +115,7 @@ impl LineDispatch {
             &mut self.bounding_box,
             &mut self.build_plate,
             &mut self.line_support_debug,
+            &mut self.measure,
             &mut self.normals,
         ];
         for dispatch in dispatches.iter_mut() {
@@ -121,6 +126,7 @@ impl LineDispatch {
             self.bounding_box.lines(),
             self.build_plate.lines(),
             self.line_support_debug.lines(),
+            self.measure.lines(),
             self.normals.lines(),
         ][..];
         self.render_pipeline.prepare(gcx, app, lines);

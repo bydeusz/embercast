@@ -32,6 +32,9 @@ use crate::{
 
 pub mod config;
 pub mod history;
+pub mod measure;
+#[cfg(test)]
+mod measure_tests;
 pub mod project;
 pub mod selected;
 pub mod slice;
