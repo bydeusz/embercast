@@ -6,6 +6,7 @@ use crate::interface::components::grid;
 macro_rules! keybinds {
     ($(($field:ident, $keybind:ident, $name:expr) => ($modif:expr, $key:expr)),*) => {
         #[derive(Clone, Serialize, Deserialize)]
+        #[serde(default)]
         pub struct Keybinds {
             #[serde(skip)]
             editing: Option<Keybind>,
