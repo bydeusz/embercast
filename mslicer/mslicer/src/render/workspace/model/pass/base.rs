@@ -210,8 +210,9 @@ impl BasePass {
         let mut render_pass = self.render_pass(encoder, multi);
         render_pass.set_pipeline(&self.pipeline);
 
+        let plate = app.project.active_plate;
         let indexes = (app.project.models.iter().enumerate())
-            .filter(|(_, x)| !x.hidden)
+            .filter(|(_, x)| x.is_shown(plate))
             .map(|(idx, _)| idx);
 
         let mut i = 0;
@@ -311,8 +312,9 @@ impl BaseResources {
         let mut uniform_buffer = DynamicUniformBuffer::new(Vec::new());
         let mut selected_words = Vec::new();
 
+        let plate = app.project.active_plate;
         let ids = (app.project.models.iter_mut())
-            .filter(|x| !x.hidden)
+            .filter(|x| x.is_shown(plate))
             .map(|x| x.id)
             .collect::<Vec<_>>();
 

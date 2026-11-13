@@ -118,7 +118,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
 
             if ui.button(concatcp!(SELECTION_ALL, " View All")).clicked() {
                 let mut bounds = Bounds3D::empty();
-                for model in app.project.models.iter().filter(|x| !x.hidden) {
+                for model in app.project.shown_models() {
                     bounds.extend(&model.bounds);
                 }
 

@@ -144,7 +144,11 @@ pub fn interface(app: &mut PopupApp, ui: &mut Ui) -> bool {
             if button.clicked() {
                 let platform =
                     (app.project.slice_config.platform_size.xy()).map(|x| x.get::<Milimeter>());
-                let (cache, models) = layout_cache(tool.config.padding, &app.project.models);
+                let (cache, models) = layout_cache(
+                    tool.config.padding,
+                    &app.project.models,
+                    app.project.active_plate,
+                );
 
                 tool.config.platform_size = platform;
                 tool.models = models;
@@ -156,11 +160,15 @@ pub fn interface(app: &mut PopupApp, ui: &mut Ui) -> bool {
     false
 }
 
-pub fn layout_cache(padding: f32, models: &[Model]) -> (LayoutCache, Vec<auto_layout::Model>) {
+pub fn layout_cache(
+    padding: f32,
+    models: &[Model],
+    plate: u32,
+) -> (LayoutCache, Vec<auto_layout::Model>) {
     let mut out = Vec::new();
     let mut cache = LayoutCache::new(padding);
 
-    for model in models.iter().filter(|x| !x.hidden) {
+    for model in models.iter().filter(|x| x.is_shown(plate)) {
         let layout_model = auto_layout::Model::from_mesh(&model.mesh, model.id.raw());
         let entry = layout_model.entry();
         out.push(layout_model);

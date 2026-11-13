@@ -31,6 +31,8 @@ use tools::supports::{
 /// changes, even in development so anyone using the dev/prerelease versions
 /// don't ruin their projects.
 ///
+/// - v19 (Embercast) — Store the build plate of each model, the plate count
+///   and the active plate.
 /// - v18 (Embercast) — Store the hollowing settings in the post processing.
 /// - v17 (Embercast) — Store the support settings and the supports of each
 ///   model.
@@ -56,7 +58,8 @@ use tools::supports::{
 /// - v3 (v0.6.0) — Added the PWM value to SliceConfig -> ExposureConfig.
 /// - v2 (v0.5.0) — A complete rewrite using a custom serilizer/deserilizer
 ///   because of the bincode drama...
-const VERSION: u16 = 18;
+const VERSION: u16 = 19;
+const MAX_PLATES: u32 = 64;
 const DESCRIPTION: &str = concatcp!(
     "Saved by Embercast v",
     crate::VERSION,
@@ -72,6 +75,7 @@ struct ModelInfo {
     color: Vector3<f32>,
     exposure: u8,
     hidden: bool,
+    plate: u32,
 
     position: Vector3<f32>,
     scale: Vector3<f32>,
@@ -88,6 +92,7 @@ impl ModelInfo {
             color: model.color.into(),
             exposure: model.exposure,
             hidden: model.hidden,
+            plate: model.plate,
             position: model.mesh.position(),
             scale: model.mesh.scale(),
             rotation: model.mesh.rotation(),
@@ -106,6 +111,7 @@ impl ModelInfo {
             .with_color(self.color.into())
             .with_exposure(self.exposure)
             .with_hidden(self.hidden)
+            .with_plate(self.plate)
             .with_collection(self.collection)
             .with_unit(self.unit)
     }
@@ -133,6 +139,7 @@ impl ModelInfo {
         self.position.serialize(ser);
         self.scale.serialize(ser);
         self.rotation.serialize(ser);
+        ser.write_u32_be(self.plate);
     }
 
     pub fn deserialize<T: Deserializer>(des: &mut T, version: u16) -> Self {
@@ -160,6 +167,7 @@ impl ModelInfo {
             position: Vector3::<f32>::deserialize(des),
             scale: Vector3::<f32>::deserialize(des),
             rotation: Vector3::<f32>::deserialize(des),
+            plate: if version < 19 { 0 } else { des.read_u32_be().min(MAX_PLATES) },
         }
     }
 }
@@ -210,6 +218,8 @@ impl Project {
         for model in self.models.iter() {
             model.supports.support_set().serialize(ser);
         }
+        ser.write_u32_be(self.plate_count());
+        ser.write_u32_be(self.active_plate);
         progress.set_finished();
     }
 
@@ -269,6 +279,12 @@ impl Project {
         } else {
             SupportConfig::default()
         };
+        let (plates, active_plate) = if version >= 19 {
+            let plates = des.read_u32_be().clamp(1, MAX_PLATES);
+            (plates, des.read_u32_be().min(plates - 1))
+        } else {
+            (1, 0)
+        };
 
         progress.set_finished();
         Ok(Self {
@@ -276,6 +292,8 @@ impl Project {
             notes,
             slice_config,
             support_config,
+            plates,
+            active_plate,
             post_processing,
             models,
             collections,

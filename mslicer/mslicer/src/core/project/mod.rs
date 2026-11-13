@@ -35,6 +35,9 @@ pub struct Project {
     pub post_processing: PostProcessing,
     pub models: Vec<Model>,
     pub collections: Vec<Collection>,
+    /// The number of build plates. A value of 0 counts as one plate.
+    pub plates: u32,
+    pub active_plate: u32,
 }
 
 #[derive(Clone)]
@@ -95,6 +98,25 @@ impl Project {
 
     pub fn collection(&mut self, id: CollectionId) -> Option<&mut Collection> {
         self.collections.iter_mut().find(|x| x.id == id)
+    }
+
+    /// Return the number of build plates, at least one.
+    pub fn plate_count(&self) -> u32 {
+        self.plates.max(1)
+    }
+
+    /// Add an empty build plate, make it the active plate and return its index.
+    pub fn add_plate(&mut self) -> u32 {
+        let index = self.plate_count();
+        self.plates = index + 1;
+        self.active_plate = index;
+        index
+    }
+
+    /// Return the models that are visible on the active build plate.
+    pub fn shown_models(&self) -> impl Iterator<Item = &Model> {
+        let plate = self.active_plate;
+        self.models.iter().filter(move |model| model.is_shown(plate))
     }
 
     pub fn update(&mut self) {

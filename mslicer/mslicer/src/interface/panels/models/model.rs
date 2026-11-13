@@ -11,7 +11,7 @@ use egui_phosphor::regular::{
     ARROW_LINE_DOWN, ARROWS_COUNTER_CLOCKWISE, BANDAIDS, COMPASS, COPY, CUBE, CURSOR_TEXT,
     DICE_THREE, EYE,
     EYE_SLASH, FLOPPY_DISK_BACK, FOLDER_DASHED, INFO, LINE_SEGMENT, LINK_BREAK, LINK_SIMPLE,
-    SUBTRACT_SQUARE, SWAP, TRASH, VECTOR_THREE, WARNING,
+    STACK, SUBTRACT_SQUARE, SWAP, TRASH, VECTOR_THREE, WARNING,
 };
 use nalgebra::Vector3;
 
@@ -147,6 +147,7 @@ pub fn model_properties(
     i: usize,
 ) {
     let kb = &app.config.keybinds;
+    let plate_count = app.project.plate_count();
     let model = &mut app.project.models[i];
 
     let platform = &app.project.slice_config.platform_size;
@@ -202,6 +203,18 @@ pub fn model_properties(
             .clicked()
         {
             app.tasks.add(AutoOrient::new(model));
+        }
+
+        if plate_count > 1 {
+            ui.menu_button(concatcp!(STACK, " Move to Plate"), |ui| {
+                let current = model.plate;
+                for plate in (0..plate_count).filter(|plate| *plate != current) {
+                    if ui.button(format!("Plate {}", plate + 1)).clicked() {
+                        model.plate = plate;
+                        app.state.selected.clear();
+                    }
+                }
+            });
         }
 
         if ui.button(concatcp!(SWAP, " Replace")).clicked() {

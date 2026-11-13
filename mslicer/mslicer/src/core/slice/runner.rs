@@ -29,8 +29,9 @@ use slicer::{
 impl App {
     pub fn slice(&mut self) {
         let device = &self.render_state.device;
+        let plate = self.project.active_plate;
         let meshes = (self.project.models.iter_mut())
-            .filter(|x| !x.hidden)
+            .filter(|x| x.is_shown(plate))
             .map(|x| {
                 (
                     (

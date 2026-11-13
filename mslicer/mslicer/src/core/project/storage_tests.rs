@@ -107,3 +107,26 @@ fn hollow_settings_survive_saving_and_loading() {
     let loaded = save_and_load(&project);
     assert_eq!(loaded.post_processing.hollow, project.post_processing.hollow);
 }
+
+#[test]
+fn build_plates_survive_saving_and_loading() {
+    let mut project = project_with_supports();
+    let second = project.add_plate();
+    project.models.push(Model::from_mesh(cube_mesh()).with_plate(second));
+
+    let loaded = save_and_load(&project);
+    assert_eq!(loaded.plate_count(), 2);
+    assert_eq!(loaded.active_plate, 1);
+    let plates: Vec<u32> = loaded.models.iter().map(|model| model.plate).collect();
+    assert_eq!(plates, vec![0, 1]);
+}
+
+#[test]
+fn new_plate_is_empty_and_becomes_the_active_plate() {
+    let mut project = project_with_supports();
+    assert_eq!(project.shown_models().count(), 1);
+    project.add_plate();
+    assert_eq!(project.shown_models().count(), 0);
+    project.active_plate = 0;
+    assert_eq!(project.shown_models().count(), 1);
+}

@@ -28,7 +28,7 @@ pub fn collection(
 ) {
     for j in 0..app.project.models.len() {
         let model = &app.project.models[j];
-        if model.collection != collection {
+        if model.collection != collection || model.plate != app.project.active_plate {
             continue;
         }
 

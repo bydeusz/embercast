@@ -150,7 +150,7 @@ fn measure_click(app: &mut App) {
         return;
     };
     let mut nearest: Option<(f32, Vector3<f32>)> = None;
-    for model in app.project.models.iter().filter(|model| !model.hidden) {
+    for model in app.project.shown_models() {
         let Some(bvh) = model.bvh.as_ref() else {
             continue;
         };

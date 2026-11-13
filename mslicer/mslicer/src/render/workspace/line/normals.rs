@@ -26,13 +26,13 @@ impl NormalsDispatch {
 impl LineGenerator for NormalsDispatch {
     fn generate_lines(&mut self, app: &mut App) {
         let config = &app.config.render.normals;
-        let models = app.project.models.iter().filter(|x| !x.hidden);
+        let models = app.project.shown_models();
         if self.last_models.update(models) || config != &self.last_config {
             self.cached_lines.clear();
             self.last_config = config.clone();
 
             if config.enabled {
-                self.cached_lines = generate_normals(&app.project.models);
+                self.cached_lines = generate_normals(app.project.shown_models());
             }
         }
     }
@@ -42,11 +42,11 @@ impl LineGenerator for NormalsDispatch {
     }
 }
 
-fn generate_normals(models: &[Model]) -> Vec<Line> {
+fn generate_normals<'a>(models: impl Iterator<Item = &'a Model>) -> Vec<Line> {
     let color = Vector3::new(0.5, 0.5, 1.0);
     let mut lines = Vec::new();
 
-    for model in models.iter().filter(|x| !x.hidden) {
+    for model in models {
         let (face, vertices) = (model.mesh.faces(), model.mesh.vertices());
 
         for (idx, &face) in face.iter().enumerate() {

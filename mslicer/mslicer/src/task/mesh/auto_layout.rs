@@ -17,10 +17,11 @@ impl AutoLayout {
     pub fn new(
         slice_config: &SliceConfig,
         models: &[Model],
+        plate: u32,
         (padding, segment_steps): (f32, f32),
     ) -> Self {
         let platform = (slice_config.platform_size.xy()).map(|x| x.get::<Milimeter>());
-        let (mut cache, models) = layout_cache(padding, models);
+        let (mut cache, models) = layout_cache(padding, models, plate);
 
         let progress = Progress::new();
         let handle = TaskThread::spawn(clone!([progress], move || {

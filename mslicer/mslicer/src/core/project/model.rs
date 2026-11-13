@@ -38,6 +38,8 @@ pub struct Model {
     pub color: LinearRgb<f32>,
     pub exposure: u8,
     pub hidden: bool,
+    /// The index of the build plate that holds the model.
+    pub plate: u32,
     pub ui: ModelUi,
 
     // Not serialized
@@ -86,6 +88,7 @@ impl Model {
             unit: MeshUnit::Millimeters,
             color: LinearRgb::splat(1.0),
             hidden: false,
+            plate: 0,
             exposure: 255,
             ui: ModelUi::default(),
 
@@ -113,6 +116,16 @@ impl Model {
     pub fn with_exposure(mut self, exposure: u8) -> Self {
         self.exposure = exposure;
         self
+    }
+
+    pub fn with_plate(mut self, plate: u32) -> Self {
+        self.plate = plate;
+        self
+    }
+
+    /// Return True if the model is visible and on the build plate `plate`.
+    pub fn is_shown(&self, plate: u32) -> bool {
+        !self.hidden && self.plate == plate
     }
 
     pub fn with_hidden(mut self, hidden: bool) -> Self {
@@ -327,6 +340,7 @@ impl Clone for Model {
             unit: self.unit,
             color: self.color,
             hidden: self.hidden,
+            plate: self.plate,
             ui: self.ui.clone(),
 
             exposure: self.exposure,

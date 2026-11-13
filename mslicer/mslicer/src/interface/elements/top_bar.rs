@@ -3,7 +3,7 @@ use std::f32::consts::TAU;
 
 use const_format::concatcp;
 use egui::{
-    Align, Align2, Button, Context, FontId, Frame, Grid, Id, Layout, PopupAnchor, ProgressBar,
+    Align, Align2, Button, ComboBox, Context, FontId, Frame, Grid, Id, Layout, PopupAnchor, ProgressBar,
     RichText, Stroke, StrokeKind, TextStyle, TopBottomPanel, Ui, vec2,
 };
 use egui_phosphor::regular::{CARDS, FILE_TEXT, GIT_DIFF, HAMMER, HOURGLASS, LIFEBUOY, STACK};
@@ -229,6 +229,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     );
                     slice_button.clicked().then(|| app.slice());
                 });
+                plate_selector(app, ui);
 
                 ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                     ui.add_space(2.0);
@@ -369,5 +370,32 @@ fn collect_instances(app: &mut App) {
             }
         }
         app.project.collections.push(collection);
+    }
+}
+
+/// Show the build plate list: switch to another plate, or add a new plate.
+///
+/// A switch clears the selection, because the selected models are on the old plate.
+fn plate_selector(app: &mut App, ui: &mut Ui) {
+    let current = app.project.active_plate;
+    ComboBox::from_id_salt("build_plate")
+        .selected_text(theme::label(&format!("Plate {}", current + 1)))
+        .show_ui(ui, |ui| {
+            for plate in 0..app.project.plate_count() {
+                let models = (app.project.models.iter()).filter(|model| model.plate == plate).count();
+                let text = format!("Plate {} · {models} model{}", plate + 1, if models == 1 { "" } else { "s" });
+                if ui.selectable_label(plate == current, text).clicked() {
+                    app.project.active_plate = plate;
+                }
+            }
+            ui.separator();
+            if ui.button("New Plate").clicked() {
+                app.project.add_plate();
+            }
+        });
+
+    if app.project.active_plate != current {
+        app.state.selected.clear();
+        app.state.selected_supports.clear();
     }
 }

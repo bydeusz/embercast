@@ -89,6 +89,7 @@ impl Task for MeshLoad {
             let mut model = Model::from_mesh(mesh)
                 .with_name(mem::take(&mut self.name))
                 .width_file(self.file.take())
+                .with_plate(app.project.active_plate)
                 .with_random_color();
             model.update_oob(&app.project.slice_config.platform_size);
             let result = PollResult::complete().with_task(MeshAnalysis::new(&model));

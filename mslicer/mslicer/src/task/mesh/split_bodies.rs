@@ -80,10 +80,13 @@ impl Task for SplitBodies {
                 let mut result = PollResult::complete();
 
                 let collection = mem::take(&mut self.collection);
+                let plate = (app.project.model(self.parent).map(|parent| parent.plate))
+                    .unwrap_or(app.project.active_plate);
                 for (i, mesh) in meshes.into_iter().enumerate() {
                     let mut model = Model::from_mesh(mesh)
                         .with_name(format!("Body {i}"))
                         .with_collection(Some(collection.id))
+                        .with_plate(plate)
                         .with_random_color();
                     model.update_oob(&app.project.slice_config.platform_size);
                     result = result.with_task(MeshAnalysis::new(&model));

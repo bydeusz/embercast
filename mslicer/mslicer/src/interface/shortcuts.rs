@@ -145,6 +145,7 @@ fn quick_layout(app: &mut App, _ctx: &Context) {
     app.tasks.add(AutoLayout::new(
         &app.project.slice_config,
         &app.project.models,
+        app.project.active_plate,
         (padding, 10.0),
     ));
 }
