@@ -11,6 +11,7 @@ pub mod keybinds;
 pub mod panels;
 pub mod popup;
 pub mod shortcuts;
+pub mod theme;
 pub mod tools;
 
 pub fn ui(app: &mut App, ctx: &Context) {

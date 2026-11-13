@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use egui::{Context, Theme, ViewportCommand, Visuals};
+use egui::{Context, ViewportCommand};
 use egui_tracing::EventCollector;
 use egui_wgpu::RenderState;
 use nalgebra::Vector3;
@@ -19,6 +19,7 @@ use crate::{
         self,
         panels::{self, Panels},
         popup::{PopupManager, confirm_unsaved},
+        theme,
     },
     render::{
         Gcx,
@@ -123,9 +124,9 @@ impl App {
 
     pub fn set_title(&mut self, ctx: &Context) {
         let title = if let Some(stem) = self.project.path.as_ref().and_then(|x| x.file_stem()) {
-            format!("mslicer — {}", stem.to_string_lossy())
+            format!("Embercast · {}", stem.to_string_lossy())
         } else {
-            "mslicer".into()
+            "Embercast".into()
         };
         ctx.send_viewport_cmd(ViewportCommand::Title(title));
     }
@@ -156,14 +157,7 @@ impl eframe::App for App {
         self.popup().render(ctx);
         self.tasks().poll();
 
-        // todo: only update the visuals if the theme has changed?
-        ctx.set_visuals(Visuals {
-            collapsing_header_frame: true,
-            ..match self.config.ui.theme {
-                Theme::Dark => Visuals::dark(),
-                Theme::Light => Visuals::light(),
-            }
-        });
+        ctx.set_visuals(theme::visuals());
 
         model::process_previews(self);
         interface::ui(self, ctx);

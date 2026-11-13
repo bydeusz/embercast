@@ -11,6 +11,7 @@ use wgpu::{
 
 use crate::{
     core::App,
+    interface::theme::{self, color},
     render::{
         Gcx,
         consts::{FILTERING_SAMPLER, NONFILTERING_SAMPLER},
@@ -187,7 +188,9 @@ impl ModelPipeline {
         multi.lighting.prepare(gcx, app, ao, None);
         multi.fxaa.prepare(gcx, app, size);
         multi.composite.prepare(gcx, app, taa, size);
-        self.render(encoder, app, Target::Viewport, passes, None);
+        let [r, g, b] = theme::rgb(color::BG_BASE);
+        let background = SRgb::new(r, g, b);
+        self.render(encoder, app, Target::Viewport, passes, Some(background));
 
         let multi = self.viewport.as_ref().unwrap();
         self.picker.update(app, gcx, encoder, multi);

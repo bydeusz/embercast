@@ -4,7 +4,7 @@ use std::f32::consts::TAU;
 use const_format::concatcp;
 use egui::{
     Align, Align2, Button, Context, FontId, Frame, Grid, Id, Layout, PopupAnchor, ProgressBar,
-    Stroke, StrokeKind, TopBottomPanel, Ui, vec2,
+    RichText, Stroke, StrokeKind, TextStyle, TopBottomPanel, Ui, vec2,
 };
 use egui_phosphor::regular::{CARDS, FILE_TEXT, GIT_DIFF, HAMMER, HOURGLASS, LIFEBUOY, STACK};
 
@@ -14,6 +14,8 @@ use crate::{
     core::{App, project::Collection},
     interface::{
         components::{labeled_separator, link_button},
+        elements::welcome,
+        theme::color,
         panels::Tab,
         popup::confirm_unsaved,
         shortcuts::{self, Shortcut},
@@ -22,10 +24,8 @@ use crate::{
     task::ProjectLoad,
 };
 
-const LINK_WEBSITE: &str = "https://mslicer.com";
-const LINK_ZULIP: &str = "https://mslicer.zulipchat.com";
-const LINK_SOURCE_CODE: &str = "https://github.com/connorslade/mslicer";
-const LINK_REPORT_BUG: &str = "https://github.com/connorslade/mslicer/issues/new";
+const LINK_REPORT_BUG: &str = "https://github.com/bydeusz/embercast/issues/new";
+const LINK_MSLICER_DOCS: &str = "https://mslicer.com/docs/getting-started";
 
 macro_rules! tool {
     ($app:expr, $ui:expr, $module:ident) => {
@@ -55,7 +55,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 ui.style_mut().spacing.item_spacing.x = 4.0;
 
                 ui.add_space(4.0);
-                ui.heading("mslicer");
+                ui.label(RichText::new("EMBERCAST").text_style(TextStyle::Heading).color(color::ACCENT));
                 ui.separator();
 
                 ui.style_mut().spacing.item_spacing.x = 6.0;
@@ -211,13 +211,13 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 });
 
                 ui.menu_button(concatcp!(LIFEBUOY, " Help"), |ui| {
-                    link_button(ui, "Project Homepage", LINK_WEBSITE);
-                    link_button(ui, "Zulip Chat", LINK_ZULIP);
-                    link_button(ui, "Source Code", LINK_SOURCE_CODE);
+                    link_button(ui, "Source Code", welcome::EMBERCAST_LINK);
                     link_button(ui, "Bug Report", LINK_REPORT_BUG);
+                    link_button(ui, "mslicer Guide", LINK_MSLICER_DOCS);
+                    link_button(ui, "mslicer Source Code", welcome::MSLICER_LINK);
 
                     ui.separator();
-                    app.config.ui.about |= ui.button("About mslicer").clicked();
+                    app.config.ui.about |= ui.button("About Embercast").clicked();
                 });
 
                 ui.add_enabled_ui(!app.is_slicing(), |ui| {

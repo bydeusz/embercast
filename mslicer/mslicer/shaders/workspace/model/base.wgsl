@@ -5,9 +5,9 @@ const STYLE_NORMAL: u32 = 0;
 const STYLE_RANDOM: u32 = 1;
 const STYLE_RENDERED: u32 = 2;
 
-const SELECTED_COLOR: vec3f = vec3f(0.2, 0.2, 1.0);
-const OOB_COLOR: vec3f = vec3f(1.0, 0.0, 0.0);
-const OVERHANG_COLOR: vec3f = vec3f(0.67, 0.65, 0.38);
+const SELECTED_COLOR: vec3f = vec3f(0.820, 0.545, 0.173);
+const OOB_COLOR: vec3f = vec3f(0.620, 0.169, 0.145);
+const OVERHANG_COLOR: vec3f = vec3f(0.851, 0.396, 0.361);
 
 struct Context {
     transform: mat4x4f,

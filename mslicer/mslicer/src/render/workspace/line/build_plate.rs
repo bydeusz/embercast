@@ -4,6 +4,7 @@ use nalgebra::Vector3;
 
 use crate::{
     core::App,
+    interface::theme::{self, color},
     render::workspace::line::{Line, LineGenerator},
 };
 
@@ -55,7 +56,7 @@ fn generate_mesh(bed_size: Vector3<Milimeters>, grid_size: f32, theme: Theme) ->
     let z = bed_size.z;
 
     let color = match theme {
-        Theme::Dark => Vector3::new(1.0, 1.0, 1.0),
+        Theme::Dark => Vector3::from(theme::rgb(color::INK_300)),
         Theme::Light => Vector3::new(0.0, 0.0, 0.0),
     };
 

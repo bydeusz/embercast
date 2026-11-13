@@ -1,19 +1,24 @@
-use egui::{Color32, Context, Frame, Id, Image, ImageSource, Modal, Widget, include_image};
-use egui_phosphor::regular::INFO;
+use egui::{Color32, Context, FontFamily, FontId, Frame, Id, Modal, RichText};
 
-use crate::{VERSION, core::App, interface::components::button_row};
+use crate::{
+    VERSION,
+    core::App,
+    interface::{
+        components::button_row,
+        theme::{self, color},
+    },
+};
 
-const LOGO: ImageSource = include_image!("../../../../dist/icon.png");
 const BACKGROUND_TINT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 100);
 
-const DESCRIPTION: &str = "Welcome to mslicer — a high-performance, open-source slicer for MSLA resin printers, created by Connor Slade.";
-const UPDATE_CHECK_TIP: &str =
-    "You can disable or customize the check frequency in Workspace panel later.";
+const DESCRIPTION: &str = "Embercast is a free, open-source resin slicer for the Creality Halot One Plus. It is a fork of mslicer, the high-performance MSLA slicer by Connor Slade, and keeps its GPL-3.0 license.";
+const CREDITS: &str = "The CXDLP file format follows UVtools by Tiago Conceição. The fonts Cinzel, Barlow and EB Garamond are under the SIL Open Font License.";
 
-const GITHUB_LINK: &str = "https://github.com/connorslade/mslicer";
-const HOMEPAGE_LINK: &str = "https://mslicer.com";
-const GETTING_STARTED_LINK: &str = "https://mslicer.com/docs/getting-started";
+pub const EMBERCAST_LINK: &str = "https://github.com/bydeusz/embercast";
+pub const MSLICER_LINK: &str = "https://github.com/connorslade/mslicer";
+const UVTOOLS_LINK: &str = "https://github.com/sn4k3/UVtools";
 
+/// Show the welcome and About window, with the credits to mslicer.
 pub fn ui(app: &mut App, ctx: &Context) {
     if !app.config.ui.about {
         return;
@@ -23,51 +28,32 @@ pub fn ui(app: &mut App, ctx: &Context) {
         .backdrop_color(BACKGROUND_TINT)
         .frame(Frame::window(&ctx.style()))
         .show(ctx, |ui| {
-            ui.set_width(400.0);
+            ui.set_width(420.0);
 
             ui.vertical_centered(|ui| {
-                Image::new(LOGO).max_width(80.0).ui(ui);
-                ui.heading(format!("mslicer v{VERSION}"));
+                let wordmark = FontId::new(30.0, FontFamily::Name(theme::DISPLAY.into()));
+                ui.label(RichText::new("EMBERCAST").font(wordmark).color(color::ACCENT));
+                ui.label(RichText::new(format!("VERSION {VERSION}")).color(color::TEXT_SECONDARY));
             });
             ui.separator();
 
-            ui.label(DESCRIPTION);
+            let prose = FontId::new(15.0, FontFamily::Name(theme::SERIF.into()));
+            ui.label(RichText::new(DESCRIPTION).font(prose.clone()));
+            ui.add_space(5.0);
+            ui.label(RichText::new(CREDITS).font(prose));
             ui.add_space(5.0);
 
             ui.horizontal_wrapped(|ui| {
-                ui.spacing_mut().item_spacing.x = 0.0;
-
-                ui.label("Source code is available on Github at ");
-                ui.hyperlink_to("@connorslade/mslicer", GITHUB_LINK)
-                    .on_hover_text(GITHUB_LINK);
-                ui.label(" and documentation is available at ");
-                ui.hyperlink_to("mslicer.com", HOMEPAGE_LINK)
-                    .on_hover_text(HOMEPAGE_LINK);
-                ui.label(".");
+                ui.hyperlink_to("Embercast source code", EMBERCAST_LINK)
+                    .on_hover_text(EMBERCAST_LINK);
+                ui.hyperlink_to("mslicer", MSLICER_LINK)
+                    .on_hover_text(MSLICER_LINK);
+                ui.hyperlink_to("UVtools", UVTOOLS_LINK)
+                    .on_hover_text(UVTOOLS_LINK);
             });
 
             ui.add_space(5.0);
-            ui.horizontal(|ui| {
-                let mut check_enabled = app.config.ui.update_check.enabled();
-                if ui
-                    .checkbox(&mut check_enabled, "Check for Updates on Startup")
-                    .changed()
-                {
-                    app.config.ui.update_check.toggle();
-                }
-                ui.label(INFO).on_hover_text(UPDATE_CHECK_TIP);
-            });
-
-            ui.add_space(5.0);
-            button_row(
-                ui,
-                [
-                    ("Continue", &mut || app.config.ui.about = false),
-                    ("Getting Started Guide", &mut || {
-                        let _ = open::that_detached(GETTING_STARTED_LINK);
-                    }),
-                ],
-            );
+            button_row(ui, [("Continue", &mut || app.config.ui.about = false)]);
         });
 
     if ctx.input(|i| !i.keys_down.is_empty()) || modal.should_close() {

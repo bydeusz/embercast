@@ -10,7 +10,7 @@ use std::{
 
 use anyhow::{Context, Result};
 use eframe::NativeOptions;
-use egui::{FontDefinitions, Vec2, ViewportBuilder};
+use egui::{Vec2, ViewportBuilder};
 use egui_wgpu::{WgpuConfiguration, WgpuSetup, WgpuSetupCreateNew};
 use tracing::{info, level_filters::LevelFilter};
 use tracing_subscriber::{filter, fmt::layer, layer::SubscriberExt, util::SubscriberInitExt};
@@ -45,7 +45,7 @@ fn main() -> Result<()> {
     let format = tracing_subscriber::fmt::layer();
     let collector = egui_tracing::EventCollector::new();
 
-    let config_dir = dirs::config_dir().unwrap().join("mslicer");
+    let config_dir = dirs::config_dir().unwrap().join("embercast");
     fs::create_dir_all(&config_dir).context("Creating config dir")?;
 
     let log_file = File::create(config_dir.join("latest.log")).context("Opening log file")?;
@@ -57,7 +57,7 @@ fn main() -> Result<()> {
         .with(collector.clone())
         .with(file_layer)
         .init();
-    info!("Starting mslicer v{VERSION}");
+    info!("Starting Embercast v{VERSION}");
 
     let args = Args::parse();
     #[allow(unused_mut)]
@@ -72,7 +72,7 @@ fn main() -> Result<()> {
     }
 
     eframe::run_native(
-        "mslicer",
+        "Embercast",
         NativeOptions {
             viewport: ViewportBuilder::default()
                 .with_inner_size(Vec2::new(1920.0, 1080.0))
@@ -115,9 +115,7 @@ fn main() -> Result<()> {
             ..Default::default()
         },
         Box::new(|cc| {
-            let mut fonts = FontDefinitions::default();
-            egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
-            cc.egui_ctx.set_fonts(fonts);
+            interface::theme::install(&cc.egui_ctx);
 
             egui_extras::install_image_loaders(&cc.egui_ctx);
 

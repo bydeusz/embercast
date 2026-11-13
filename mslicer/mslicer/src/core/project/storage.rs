@@ -58,9 +58,9 @@ use tools::supports::{
 ///   because of the bincode drama...
 const VERSION: u16 = 18;
 const DESCRIPTION: &str = concatcp!(
-    "Saved by mslicer v",
+    "Saved by Embercast v",
     crate::VERSION,
-    " (https://mslicer.com)"
+    ", a fork of mslicer (https://github.com/connorslade/mslicer)"
 );
 
 struct ModelInfo {

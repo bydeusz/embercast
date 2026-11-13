@@ -9,9 +9,11 @@ use egui::Color32;
 use parking_lot::{Mutex, MutexGuard};
 use slicer::post_process::cavities::{Cavity, CavityKind};
 
-pub const ISLAND_COLOR: Color32 = Color32::from_rgb(0x9e, 0x2b, 0x25);
-pub const RESIN_TRAP_COLOR: Color32 = Color32::from_rgb(0xd9, 0x65, 0x5c);
-pub const SUCTION_CUP_COLOR: Color32 = Color32::from_rgb(0xd1, 0x8b, 0x2c);
+use crate::interface::theme::color;
+
+pub const ISLAND_COLOR: Color32 = color::DANGER;
+pub const RESIN_TRAP_COLOR: Color32 = color::DANGER_TEXT;
+pub const SUCTION_CUP_COLOR: Color32 = color::ACCENT;
 
 #[derive(Default)]
 pub struct Annotations {

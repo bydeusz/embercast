@@ -54,19 +54,6 @@ impl UpdateCheckFrequency {
             UpdateCheckFrequency::Weekly => Duration::days(7),
         })
     }
-
-    pub fn enabled(&self) -> bool {
-        !matches!(self, UpdateCheckFrequency::Never)
-    }
-
-    pub fn toggle(&mut self) {
-        *self = match self {
-            UpdateCheckFrequency::Never => UpdateCheckFrequency::EveryLaunch,
-            UpdateCheckFrequency::EveryLaunch
-            | UpdateCheckFrequency::Daily
-            | UpdateCheckFrequency::Weekly => UpdateCheckFrequency::Never,
-        };
-    }
 }
 
 impl Default for UiConfig {
@@ -81,7 +68,7 @@ impl Default for UiConfig {
             hover_overlay: true,
             hover_overlay_detail: false,
 
-            update_check: UpdateCheckFrequency::EveryLaunch,
+            update_check: UpdateCheckFrequency::Never,
             last_update_check: None,
             ignore_update: None,
         }
