@@ -60,14 +60,20 @@ fn generate_mesh(bed_size: Vector3<Milimeters>, grid_size: f32, theme: Theme) ->
         Theme::Light => Vector3::new(0.0, 0.0, 0.0),
     };
 
+    let rim = match theme {
+        Theme::Dark => Vector3::from(theme::rgb(color::ACCENT_PRESS)),
+        Theme::Light => Vector3::new(0.0, 0.0, 0.0),
+    };
+
     let line = |start, end| Line::new(start, end).color(color);
+    let rim_line = |start, end| Line::new(start, end).color(rim);
 
     let mut lines = vec![
         // Bottom plane
-        line(Vector3::new(a.x, a.y, 0.0), Vector3::new(b.x, a.y, 0.0)),
-        line(Vector3::new(a.x, b.y, 0.0), Vector3::new(b.x, b.y, 0.0)),
-        line(Vector3::new(a.x, a.y, 0.0), Vector3::new(a.x, b.y, 0.0)),
-        line(Vector3::new(b.x, a.y, 0.0), Vector3::new(b.x, b.y, 0.0)),
+        rim_line(Vector3::new(a.x, a.y, 0.0), Vector3::new(b.x, a.y, 0.0)),
+        rim_line(Vector3::new(a.x, b.y, 0.0), Vector3::new(b.x, b.y, 0.0)),
+        rim_line(Vector3::new(a.x, a.y, 0.0), Vector3::new(a.x, b.y, 0.0)),
+        rim_line(Vector3::new(b.x, a.y, 0.0), Vector3::new(b.x, b.y, 0.0)),
         // Top plane
         line(Vector3::new(a.x, a.y, z), Vector3::new(b.x, a.y, z)),
         line(Vector3::new(a.x, b.y, z), Vector3::new(b.x, b.y, z)),

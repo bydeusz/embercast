@@ -33,6 +33,9 @@ use crate::{
 mod bindings;
 mod pass;
 pub mod pick;
+mod plate;
+#[cfg(test)]
+mod plate_tests;
 mod preview;
 mod selected;
 pub use preview::process_previews;

@@ -1,6 +1,7 @@
-use std::num::NonZero;
+use std::{iter, num::NonZero};
 
 use common::units::Milimeter;
+use egui::Color32;
 use encase::{DynamicUniformBuffer, ShaderSize, ShaderType};
 use nalgebra::{Matrix4, Vector2, Vector3};
 use wgpu::{
@@ -17,13 +18,19 @@ use wgpu::{
 use crate::{
     core::{App, config::render::RenderStyle, project::model::ModelId, state::Tool},
     include_shader,
+    interface::theme::{self, color},
     render::{
         Gcx, VERTEX_BUFFER_LAYOUT,
         util::ResizingBuffer,
-        workspace::model::{MultiStage, selected::Selected},
+        workspace::model::{MultiStage, plate::PlateBuffers, selected::Selected},
     },
     util::misc::invert_color,
 };
+
+/// The render style of the shader that draws the build plate in its own color, without warnings or selections.
+const STYLE_PLATE: u32 = 3;
+/// The model id of the build plate. The picker ignores this id, so a click on the plate selects nothing.
+const PLATE_ID: u32 = u32::MAX;
 
 pub struct BasePass {
     pipeline: RenderPipeline,
@@ -35,6 +42,8 @@ pub struct BaseResources {
     uniform_offsets: Vec<u32>,
     selected: ResizingBuffer,
     bind_group: Option<BindGroup>,
+    plate: Option<PlateBuffers>,
+    plate_offsets: Vec<u32>,
 }
 
 #[derive(ShaderType, Clone)]
@@ -210,6 +219,16 @@ impl BasePass {
         let mut render_pass = self.render_pass(encoder, multi);
         render_pass.set_pipeline(&self.pipeline);
 
+        if let Some(plate) = &resources.plate {
+            let draws = iter::once(&plate.slab).chain(plate.label.as_ref());
+            for (offset, (buffers, faces)) in resources.plate_offsets.iter().zip(draws) {
+                render_pass.set_bind_group(0, bind_group, &[*offset]);
+                render_pass.set_vertex_buffer(0, buffers.vertex_buffer.slice(..));
+                render_pass.set_index_buffer(buffers.index_buffer.slice(..), IndexFormat::Uint32);
+                render_pass.draw_indexed(0..faces * 3, 0, 0..1);
+            }
+        }
+
         let plate = app.project.active_plate;
         let indexes = (app.project.models.iter().enumerate())
             .filter(|(_, x)| x.is_shown(plate))
@@ -270,6 +289,8 @@ impl BaseResources {
             selected,
             uniform_offsets: Vec::new(),
             bind_group: None,
+            plate: None,
+            plate_offsets: Vec::new(),
         }
     }
 
@@ -300,14 +321,20 @@ impl BaseResources {
         self.bind_group.replace(bind_group);
     }
 
+    /// Write the uniforms of the shown models, then the `plate_uniforms`, and remember their offsets.
+    ///
+    /// The `callback` gives the uniforms and the selected face ranges of one
+    /// model and its supports. The `plate_uniforms` have no selected faces.
     fn write_uniforms(
         &mut self,
         gcx: &Gcx,
         app: &mut App,
         layout: &BindGroupLayout,
+        plate_uniforms: Vec<Uniforms>,
         mut callback: impl FnMut(&mut App, &Gcx, ModelId) -> Vec<(Uniforms, Vec<[u32; 2]>)>,
     ) {
         self.uniform_offsets.clear();
+        self.plate_offsets.clear();
 
         let mut uniform_buffer = DynamicUniformBuffer::new(Vec::new());
         let mut selected_words = Vec::new();
@@ -332,11 +359,18 @@ impl BaseResources {
             }
         }
 
+        for mut uniform in plate_uniforms {
+            uniform.selected = Vector2::new(selected_words.len(), 0).cast();
+            let offset = uniform_buffer.write(&uniform);
+            self.plate_offsets.push(offset.unwrap() as u32);
+        }
+
         selected_words.resize(selected_words.len().max(1), [0; 2]);
         let uniform = self.uniform.write(gcx, &uniform_buffer.into_inner());
         let selected = self.selected.write_slice(gcx, &selected_words);
 
-        if !self.uniform_offsets.is_empty() && (uniform || selected) {
+        let any = !self.uniform_offsets.is_empty() || !self.plate_offsets.is_empty();
+        if any && (uniform || selected) {
             self.recreate_bind_group(gcx, layout);
         }
     }
@@ -359,7 +393,26 @@ impl BaseResources {
             .map(|x| x.to_radians())
             .unwrap_or(f32::from_bits(u32::MAX));
 
-        self.write_uniforms(gcx, app, &pass.group_layout, |app, gcx, model_id| {
+        let platform = build_volume.xy();
+        if self.plate.as_ref().is_none_or(|plate| plate.size != platform) {
+            self.plate = Some(PlateBuffers::new(&gcx.device, platform));
+        }
+        let plate_uniform = |fill: Color32| Uniforms {
+            transform: view_projection,
+            model_transform: Matrix4::identity(),
+            build_volume,
+            model_color: Vector3::from(theme::rgb(fill)),
+            render_style: STYLE_PLATE,
+            overhang_angle: f32::from_bits(u32::MAX),
+            id: PLATE_ID,
+            selected: Vector2::zeros(),
+        };
+        let mut plate = vec![plate_uniform(color::SURFACE_CARD_RAISED)];
+        if self.plate.as_ref().is_some_and(|plate| plate.label.is_some()) {
+            plate.push(plate_uniform(color::ACCENT_PRESS));
+        }
+
+        self.write_uniforms(gcx, app, &pass.group_layout, plate, |app, gcx, model_id| {
             let model = app.project.model(model_id).unwrap();
             model.get_buffers(&gcx.device);
 

@@ -4,6 +4,7 @@
 const STYLE_NORMAL: u32 = 0;
 const STYLE_RANDOM: u32 = 1;
 const STYLE_RENDERED: u32 = 2;
+const STYLE_PLATE: u32 = 3;
 
 const SELECTED_COLOR: vec3f = vec3f(0.820, 0.545, 0.173);
 const OOB_COLOR: vec3f = vec3f(0.620, 0.169, 0.145);
@@ -74,6 +75,9 @@ fn render(is_front: bool, in: VertexOutput, index: u32, normal: vec3f) -> vec4f 
             color = select(color, OOB_COLOR, outside_build_volume(in.world_position));
 
             return vec4f(color, 1.0);
+        }
+        case STYLE_PLATE: {
+            return vec4f(ctx.model_color, 1.0);
         }
         default: {
             return vec4f();
