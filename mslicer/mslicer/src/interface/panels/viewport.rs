@@ -128,8 +128,10 @@ pub fn ui(app: &mut App, ui: &mut Ui, ctx: &Context) {
 
     paint_area_selection(painter, app, &rect, px);
     paint_basis_vectors(painter, app, &rect);
-    paint_toolbar(app, ctx, &rect);
-    paint_measurement(app, ctx, &rect);
+    if app.config.ui.classic_layout {
+        paint_toolbar(app, ctx, &rect);
+        paint_measurement(app, ctx, &rect);
+    }
 
     // Can't just use `response.contains_pointer()` since the hover overlay can
     // take focus away from the viewport.
@@ -183,20 +185,24 @@ fn paint_measurement(app: &mut App, ctx: &Context, rect: &Rect) {
         .constrain_to(*rect)
         .show(ctx, |ui| {
             Frame::window(ui.style()).show(ui, |ui| {
-                let text = match (app.state.measure.points().len(), app.state.measure.distance()) {
-                    (_, Some((distance, delta))) => format!(
-                        "Distance {distance:.2} mm\nX {:.2} · Y {:.2} · Z {:.2} mm",
-                        delta.x, delta.y, delta.z
-                    ),
-                    (1, None) => "Click a second point on a model.".to_owned(),
-                    _ => "Click a point on a model to start measuring.".to_owned(),
-                };
-                ui.label(text);
+                ui.label(measurement_text(app));
                 if !app.state.measure.points().is_empty() && ui.button("Clear").clicked() {
                     app.state.measure.clear();
                 }
             });
         });
+}
+
+/// Return the measured distance in words, or the next thing to click for the measurement.
+pub fn measurement_text(app: &App) -> String {
+    match (app.state.measure.points().len(), app.state.measure.distance()) {
+        (_, Some((distance, delta))) => format!(
+            "Distance {distance:.2} mm\nX {:.2} · Y {:.2} · Z {:.2} mm",
+            delta.x, delta.y, delta.z
+        ),
+        (1, None) => "Click a second point on a model.".to_owned(),
+        _ => "Click a point on a model to start measuring.".to_owned(),
+    }
 }
 
 fn paint_area_selection(painter: &Painter, app: &mut App, rect: &Rect, px: Pos2) {

@@ -46,6 +46,19 @@ pub mod color {
     /// crimson-300: danger text on a dark ground.
     pub const DANGER_TEXT: Color32 = Color32::from_rgb(0xd9, 0x65, 0x5c);
 
+    /// `bg-sunken`: the status bar at the bottom of the window.
+    pub const BG_SUNKEN: Color32 = Color32::from_rgb(0x05, 0x05, 0x06);
+    /// gold-300: the label of the active step, tool or tab.
+    pub const GOLD_300: Color32 = Color32::from_rgb(0xf0, 0xc8, 0x78);
+    /// bone-400: dim text, such as hints and units.
+    pub const BONE_400: Color32 = Color32::from_rgb(0xa8, 0x9c, 0x81);
+    /// steel-300: the Z axis.
+    pub const STEEL_300: Color32 = Color32::from_rgb(0xa7, 0xa7, 0xb0);
+    /// `success` (patina-500): borders of a passed check.
+    pub const SUCCESS: Color32 = Color32::from_rgb(0x4e, 0x6e, 0x57);
+    /// patina-400: success text and the Y axis.
+    pub const SUCCESS_TEXT: Color32 = Color32::from_rgb(0x6f, 0x90, 0x70);
+
     /// `border-hairline`: thin gold lines at rest.
     pub fn border_hairline() -> Color32 {
         Color32::from_rgba_unmultiplied(0xd1, 0x8b, 0x2c, 41)
@@ -54,6 +67,31 @@ pub mod color {
     /// `border-strong`: gold lines with emphasis.
     pub fn border_strong() -> Color32 {
         Color32::from_rgba_unmultiplied(0xd1, 0x8b, 0x2c, 87)
+    }
+
+    /// `accent-soft`: the fill behind an active step, tool or tab.
+    pub fn accent_soft() -> Color32 {
+        Color32::from_rgba_unmultiplied(0xd1, 0x8b, 0x2c, 36)
+    }
+
+    /// `border-steel`: the border of fields and quiet buttons.
+    pub fn border_steel() -> Color32 {
+        Color32::from_rgba_unmultiplied(0xa7, 0xa7, 0xb0, 31)
+    }
+
+    /// `divider`: quiet lines between sections.
+    pub fn divider() -> Color32 {
+        Color32::from_rgba_unmultiplied(0xa7, 0xa7, 0xb0, 26)
+    }
+
+    /// `success-soft`: the fill behind a passed check.
+    pub fn success_soft() -> Color32 {
+        Color32::from_rgba_unmultiplied(0x4e, 0x6e, 0x57, 46)
+    }
+
+    /// `danger-soft`: the fill behind a failed check.
+    pub fn danger_soft() -> Color32 {
+        Color32::from_rgba_unmultiplied(0x9e, 0x2b, 0x25, 41)
     }
 }
 

@@ -19,6 +19,8 @@ pub struct UiConfig {
     pub quick_layout_spacing: Milimeters,
     pub hover_overlay: bool,
     pub hover_overlay_detail: bool,
+    /// If true, the window shows the movable panels of mslicer instead of the three steps of Embercast.
+    pub classic_layout: bool,
 
     pub update_check: UpdateCheckFrequency,
     pub last_update_check: Option<DateTime<Utc>>,
@@ -67,6 +69,7 @@ impl Default for UiConfig {
             quick_layout_spacing: Milimeters::new(2.0),
             hover_overlay: true,
             hover_overlay_detail: false,
+            classic_layout: false,
 
             update_check: UpdateCheckFrequency::Never,
             last_update_check: None,

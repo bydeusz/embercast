@@ -26,6 +26,7 @@ use crate::{
 
 const LINK_REPORT_BUG: &str = "https://github.com/bydeusz/embercast/issues/new";
 const LINK_MSLICER_DOCS: &str = "https://mslicer.com/docs/getting-started";
+const CLASSIC_LAYOUT_TIP: &str = "Shows the movable panels of mslicer instead of the three steps of Embercast.";
 
 macro_rules! tool {
     ($app:expr, $ui:expr, $module:ident) => {
@@ -59,167 +60,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 ui.separator();
 
                 ui.style_mut().spacing.item_spacing.x = 6.0;
-                ui.menu_button(theme::label(concatcp!(FILE_TEXT, " File")), |ui| {
-                    ui.set_width(150.0);
-
-                    labeled_separator(ui, "Import");
-                    menu_button(
-                        (ui, app, ctx),
-                        &shortcuts::IMPORT_MODEL_SHORTCUT,
-                        "Load Mesh",
-                    );
-                    menu_button(
-                        (ui, app, ctx),
-                        &shortcuts::LOAD_TEAPOT_SHORTCUT,
-                        "Utah Teapot",
-                    );
-                    menu_button(
-                        (ui, app, ctx),
-                        &shortcuts::IMPORT_SLICED_SHORTCUT,
-                        "Load Sliced",
-                    );
-
-                    labeled_separator(ui, "Project");
-                    menu_button((ui, app, ctx), &shortcuts::NEW_PROJECT_SHORTCUT, "New");
-                    menu_button((ui, app, ctx), &shortcuts::LOAD_PROJECT_SHORTCUT, "Open");
-                    ui.add_enabled_ui(!app.config.recent_projects.is_empty(), |ui| {
-                        ui.menu_button("Recent", |ui| {
-                            let mut load = None;
-                            for path in app.config.recent_projects.iter() {
-                                let name = path.file_name().unwrap().to_string_lossy();
-                                if ui.button(name).clicked() {
-                                    ui.close();
-                                    load = Some(path.clone());
-                                }
-                            }
-
-                            if let Some(path) = load {
-                                confirm_unsaved(app, move |_app| {
-                                    vec![Box::new(ProjectLoad::new(path.to_path_buf()))]
-                                });
-                            }
-                        });
-                    });
-                    menu_button((ui, app, ctx), &shortcuts::SAVE_PROJECT_SHORTCUT, "Save");
-                    ui.add_enabled_ui(app.project.path.is_some(), |ui| {
-                        menu_button(
-                            (ui, app, ctx),
-                            &shortcuts::SAVE_AS_PROJECT_SHORTCUT,
-                            "Save As",
-                        )
-                    });
-
-                    labeled_separator(ui, "Misc");
-
-                    #[cfg(windows)]
-                    if app.config.portable && ui.button("Install").clicked() {
-                        confirm_unsaved(app, |app| {
-                            if launch_install().is_ok() {
-                                app.config.portable = false;
-                                let _ = app.config.save(&app.config_dir);
-                                app.state.close_requested = true;
-                            }
-                            Vec::new()
-                        });
-                    }
-
-                    menu_button((ui, app, ctx), &shortcuts::QUIT_SHORTCUT, "Quit");
-                });
-
-                ui.menu_button(theme::label(concatcp!(GIT_DIFF, " Edit")), |ui| {
-                    ui.set_width(150.0);
-
-                    labeled_separator(ui, "History");
-                    ui.add_enabled_ui(app.history.can_undo(), |ui| {
-                        menu_button((ui, app, ctx), &shortcuts::UNDO_SHORTCUT, "Undo")
-                    });
-                    ui.add_enabled_ui(app.history.can_redo(), |ui| {
-                        menu_button((ui, app, ctx), &shortcuts::REDO_SHORTCUT, "Redo");
-                    });
-
-                    ui.add_enabled_ui(app.history.can_undo() || app.history.can_redo(), |ui| {
-                        ui.button("Clear").clicked().then(|| app.history.clear());
-                        ui.menu_button("Actions", |ui| actions_menu(app, ui));
-                    });
-
-                    labeled_separator(ui, "Selections");
-                    menu_button(
-                        (ui, app, ctx),
-                        &shortcuts::SELECT_ALL_SHORTCUT,
-                        "Select Models",
-                    );
-                    ui.add_enabled_ui(app.state.selected.has_any(), |ui| {
-                        menu_button((ui, app, ctx), &shortcuts::SELECT_NONE_SHORTCUT, "Deselect");
-                    });
-                });
-
-                ui.menu_button(theme::label(concatcp!(HAMMER, " Tools")), |ui| {
-                    ui.set_width(150.0);
-                    labeled_separator(ui, "Auto Layout");
-                    menu_button((ui, app, ctx), &shortcuts::LAYOUT_SHORTCUT, "Quick Layout");
-                    tool!(app, ui, auto_layout);
-
-                    labeled_separator(ui, "Exposure");
-                    tool!(app, ui, printed_circuit_board);
-                    tool!(app, ui, image);
-
-                    ui.menu_button("Calibration", |ui| {
-                        tool!(app, ui, test_pattern);
-                        tool!(app, ui, exposure_test);
-                        tool!(app, ui, internal_exposure_test);
-                    });
-
-                    labeled_separator(ui, "Mesh");
-                    tool!(app, ui, text_label);
-                    tool!(app, ui, height_map);
-                    ui.menu_button("Fun", |ui| {
-                        tool!(app, ui, phonograph_record);
-                        tool!(app, ui, graphics_3d);
-                    });
-
-                    labeled_separator(ui, "Miscellaneous");
-                    ui.button("Collect Instances")
-                        .clicked()
-                        .then(|| collect_instances(app));
-                    tool!(app, ui, sliced_diff);
-
-                    ui.add_enabled_ui(cfg!(feature = "experimental"), |ui| {
-                        #[allow(unused)]
-                        ui.menu_button("Experimental", |ui| {
-                            #[cfg(feature = "experimental")]
-                            {
-                                tool!(app, ui, sdf_slicer);
-                                tool!(app, ui, brep_slicer);
-                            }
-                        })
-                        .response
-                        .on_disabled_hover_text("Experiential tools are disabled in this build.");
-                    });
-                });
-
-                ui.menu_button(theme::label(concatcp!(CARDS, " View")), |ui| {
-                    ui.set_width(150.0);
-
-                    labeled_separator(ui, "Actions");
-                    app.state.queue_reset_ui |= ui.button("Reset Interface").clicked();
-
-                    labeled_separator(ui, "Windows");
-                    for tab in Tab::ALL {
-                        app.panels.checkbox(tab, |open| {
-                            ui.checkbox(open, tab.name());
-                        });
-                    }
-                });
-
-                ui.menu_button(theme::label(concatcp!(LIFEBUOY, " Help")), |ui| {
-                    link_button(ui, "Source Code", welcome::EMBERCAST_LINK);
-                    link_button(ui, "Bug Report", LINK_REPORT_BUG);
-                    link_button(ui, "mslicer Guide", LINK_MSLICER_DOCS);
-                    link_button(ui, "mslicer Source Code", welcome::MSLICER_LINK);
-
-                    ui.separator();
-                    app.config.ui.about |= ui.button("About Embercast").clicked();
-                });
+                menus(app, ui, ctx);
 
                 ui.add_enabled_ui(!app.is_slicing(), |ui| {
                     let shortcut = app.config.keybinds.get(shortcuts::SLICE_SHORTCUT.keybind);
@@ -238,6 +79,175 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 });
             });
         });
+}
+
+/// Show the File, Edit, Tools, View and Help menus in `ui`.
+pub fn menus(app: &mut App, ui: &mut Ui, ctx: &Context) {
+    ui.menu_button(theme::label(concatcp!(FILE_TEXT, " File")), |ui| {
+        ui.set_width(150.0);
+
+        labeled_separator(ui, "Import");
+        menu_button(
+            (ui, app, ctx),
+            &shortcuts::IMPORT_MODEL_SHORTCUT,
+            "Load Mesh",
+        );
+        menu_button(
+            (ui, app, ctx),
+            &shortcuts::LOAD_TEAPOT_SHORTCUT,
+            "Utah Teapot",
+        );
+        menu_button(
+            (ui, app, ctx),
+            &shortcuts::IMPORT_SLICED_SHORTCUT,
+            "Load Sliced",
+        );
+
+        labeled_separator(ui, "Project");
+        menu_button((ui, app, ctx), &shortcuts::NEW_PROJECT_SHORTCUT, "New");
+        menu_button((ui, app, ctx), &shortcuts::LOAD_PROJECT_SHORTCUT, "Open");
+        ui.add_enabled_ui(!app.config.recent_projects.is_empty(), |ui| {
+            ui.menu_button("Recent", |ui| {
+                let mut load = None;
+                for path in app.config.recent_projects.iter() {
+                    let name = path.file_name().unwrap().to_string_lossy();
+                    if ui.button(name).clicked() {
+                        ui.close();
+                        load = Some(path.clone());
+                    }
+                }
+
+                if let Some(path) = load {
+                    confirm_unsaved(app, move |_app| {
+                        vec![Box::new(ProjectLoad::new(path.to_path_buf()))]
+                    });
+                }
+            });
+        });
+        menu_button((ui, app, ctx), &shortcuts::SAVE_PROJECT_SHORTCUT, "Save");
+        ui.add_enabled_ui(app.project.path.is_some(), |ui| {
+            menu_button(
+                (ui, app, ctx),
+                &shortcuts::SAVE_AS_PROJECT_SHORTCUT,
+                "Save As",
+            )
+        });
+
+        labeled_separator(ui, "Misc");
+
+        #[cfg(windows)]
+        if app.config.portable && ui.button("Install").clicked() {
+            confirm_unsaved(app, |app| {
+                if launch_install().is_ok() {
+                    app.config.portable = false;
+                    let _ = app.config.save(&app.config_dir);
+                    app.state.close_requested = true;
+                }
+                Vec::new()
+            });
+        }
+
+        menu_button((ui, app, ctx), &shortcuts::QUIT_SHORTCUT, "Quit");
+    });
+
+    ui.menu_button(theme::label(concatcp!(GIT_DIFF, " Edit")), |ui| {
+        ui.set_width(150.0);
+
+        labeled_separator(ui, "History");
+        ui.add_enabled_ui(app.history.can_undo(), |ui| {
+            menu_button((ui, app, ctx), &shortcuts::UNDO_SHORTCUT, "Undo")
+        });
+        ui.add_enabled_ui(app.history.can_redo(), |ui| {
+            menu_button((ui, app, ctx), &shortcuts::REDO_SHORTCUT, "Redo");
+        });
+
+        ui.add_enabled_ui(app.history.can_undo() || app.history.can_redo(), |ui| {
+            ui.button("Clear").clicked().then(|| app.history.clear());
+            ui.menu_button("Actions", |ui| actions_menu(app, ui));
+        });
+
+        labeled_separator(ui, "Selections");
+        menu_button(
+            (ui, app, ctx),
+            &shortcuts::SELECT_ALL_SHORTCUT,
+            "Select Models",
+        );
+        ui.add_enabled_ui(app.state.selected.has_any(), |ui| {
+            menu_button((ui, app, ctx), &shortcuts::SELECT_NONE_SHORTCUT, "Deselect");
+        });
+    });
+
+    ui.menu_button(theme::label(concatcp!(HAMMER, " Tools")), |ui| {
+        ui.set_width(150.0);
+        labeled_separator(ui, "Auto Layout");
+        menu_button((ui, app, ctx), &shortcuts::LAYOUT_SHORTCUT, "Quick Layout");
+        tool!(app, ui, auto_layout);
+
+        labeled_separator(ui, "Exposure");
+        tool!(app, ui, printed_circuit_board);
+        tool!(app, ui, image);
+
+        ui.menu_button("Calibration", |ui| {
+            tool!(app, ui, test_pattern);
+            tool!(app, ui, exposure_test);
+            tool!(app, ui, internal_exposure_test);
+        });
+
+        labeled_separator(ui, "Mesh");
+        tool!(app, ui, text_label);
+        tool!(app, ui, height_map);
+        ui.menu_button("Fun", |ui| {
+            tool!(app, ui, phonograph_record);
+            tool!(app, ui, graphics_3d);
+        });
+
+        labeled_separator(ui, "Miscellaneous");
+        ui.button("Collect Instances")
+            .clicked()
+            .then(|| collect_instances(app));
+        tool!(app, ui, sliced_diff);
+
+        ui.add_enabled_ui(cfg!(feature = "experimental"), |ui| {
+            #[allow(unused)]
+            ui.menu_button("Experimental", |ui| {
+                #[cfg(feature = "experimental")]
+                {
+                    tool!(app, ui, sdf_slicer);
+                    tool!(app, ui, brep_slicer);
+                }
+            })
+            .response
+            .on_disabled_hover_text("Experiential tools are disabled in this build.");
+        });
+    });
+
+    ui.menu_button(theme::label(concatcp!(CARDS, " View")), |ui| {
+        ui.set_width(150.0);
+
+        labeled_separator(ui, "Layout");
+        ui.checkbox(&mut app.config.ui.classic_layout, "Classic Panels")
+            .on_hover_text(CLASSIC_LAYOUT_TIP);
+
+        labeled_separator(ui, "Actions");
+        app.state.queue_reset_ui |= ui.button("Reset Interface").clicked();
+
+        labeled_separator(ui, "Windows");
+        for tab in Tab::ALL {
+            app.panels.checkbox(tab, |open| {
+                ui.checkbox(open, tab.name());
+            });
+        }
+    });
+
+    ui.menu_button(theme::label(concatcp!(LIFEBUOY, " Help")), |ui| {
+        link_button(ui, "Source Code", welcome::EMBERCAST_LINK);
+        link_button(ui, "Bug Report", LINK_REPORT_BUG);
+        link_button(ui, "mslicer Guide", LINK_MSLICER_DOCS);
+        link_button(ui, "mslicer Source Code", welcome::MSLICER_LINK);
+
+        ui.separator();
+        app.config.ui.about |= ui.button("About Embercast").clicked();
+    });
 }
 
 fn actions_menu(app: &mut App, ui: &mut Ui) {
@@ -280,7 +290,7 @@ fn actions_menu(app: &mut App, ui: &mut Ui) {
     }
 }
 
-fn tasks_button(app: &mut App, ctx: &Context, ui: &mut Ui) {
+pub fn tasks_button(app: &mut App, ctx: &Context, ui: &mut Ui) {
     let y = ui.spacing().interact_size.y;
     let (rect, mut response) = ui.allocate_exact_size(vec2(y, y), egui::Sense::click());
     response = response.on_hover_text("Monitor the progress of async background tasks.");

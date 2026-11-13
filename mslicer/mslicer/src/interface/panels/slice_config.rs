@@ -83,14 +83,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
         ui.horizontal(|ui| {
             ui.style_mut().spacing.item_spacing.x = 4.0;
             ComboBox::from_id_salt("printer")
-                .selected_text(match app.state.selected_printer {
-                    SelectedPrinter::Project => Cow::Borrowed("Custom"),
-                    SelectedPrinter::Custom(i) => app.config.printers[i].name.clone(),
-                    SelectedPrinter::Preset(brand, model) => {
-                        let brand = DEFAULT_PRINTERS[brand];
-                        Cow::Owned(format!("{} {}", brand.0, brand.1[model].name))
-                    }
-                })
+                .selected_text(printer_name(&app.config, &app.state.selected_printer))
                 .show_ui(ui, |ui| {
                     printer_presets(ui, &mut app.config, &mut app.state);
                 });
@@ -390,6 +383,18 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
             SliceConfigAction::ElephantFootFixer(post_processing.elephant_foot_fixer.clone()).into()
         }),
     );
+}
+
+/// Return the name of the printer that `printer` points to, or "Custom" for the settings of the project.
+pub fn printer_name(config: &Config, printer: &SelectedPrinter) -> Cow<'static, str> {
+    match *printer {
+        SelectedPrinter::Project => Cow::Borrowed("Custom"),
+        SelectedPrinter::Custom(i) => config.printers[i].name.clone(),
+        SelectedPrinter::Preset(brand, model) => {
+            let brand = DEFAULT_PRINTERS[brand];
+            Cow::Owned(format!("{} {}", brand.0, brand.1[model].name))
+        }
+    }
 }
 
 fn printer_presets(ui: &mut Ui, config: &mut Config, state: &mut UiState) {
@@ -744,7 +749,7 @@ fn variable_layer_height(this: &mut VariableLayerHeight, ui: &mut Ui) -> bool {
     editing
 }
 
-fn hollow(this: &mut Hollow, ui: &mut Ui) -> bool {
+pub fn hollow(this: &mut Hollow, ui: &mut Ui) -> bool {
     ui.label("Makes thick parts hollow to save resin. Parts thinner than two walls, such as supports, stay solid. Drain holes go from the lowest part of the cavity straight down through the wall.");
     ui.add_space(8.0);
 
@@ -867,7 +872,7 @@ fn elephant_foot_fixer(this: &mut ElephantFootFixer, ui: &mut Ui) -> bool {
 }
 
 /// Copy the settings of `profile` into `config` and add one undo step for each changed setting.
-fn apply_resin_profile(profile: &ResinProfile, config: &mut SliceConfig, history: &mut History) {
+pub fn apply_resin_profile(profile: &ResinProfile, config: &mut SliceConfig, history: &mut History) {
     let old = config.clone();
     profile.apply(config);
 

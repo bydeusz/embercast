@@ -190,7 +190,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     ui.label(SUPPORT_NOTE);
 }
 
-fn generate_support(app: &mut App, model: usize) {
+pub fn generate_support(app: &mut App, model: usize) {
     let default_lift = app.project.support_config.default_lift.get::<Milimeter>();
 
     let model = &mut app.project.models[model];

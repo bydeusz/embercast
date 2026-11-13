@@ -84,26 +84,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
         if let Some(result) = slice_operation.result().as_mut() {
             let format = app.project.slice_config.mode;
 
-            if mem::take(&mut result.fresh) {
-                app.state.preview_layer = 1;
-                app.state.last_preview_layer = 0;
-                app.state.preview_offset = Vector2::zeros();
-                app.state.preview_scale = 1.0;
-
-                if let GenericSliceData::Raster { data, .. } = result.slice_data()
-                    && let Some((layers, _defects)) = error_stats(&data)
-                {
-                    let body = SLICING_DEFECTS
-                        .replace("{layers}", &layers.to_string())
-                        .replace("{s}", if layers == 1 { "" } else { "s" });
-                    app.popup
-                        .open(Popup::simple("Slicing Defects", PopupIcon::Warning, body));
-                }
-
-                let layers = result.inner.layers();
-                app.state.layer_count = (layers, layers.to_string().len() as u8);
-                app.state.preview_mode = PreviewMode::Static;
-            }
+            reset_for_new_result(&mut app.state, &mut app.popup, result);
 
             ui.horizontal(|ui| {
                 ui.horizontal(|ui| {
@@ -221,17 +202,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
                                 .clicked()
                                 && let GenericSliceResult::Raster(raster) = &mut result.inner
                             {
-                                raster.detected_islands = true;
-                                app.tasks.add(IslandDetection::new(
-                                    result.config.platform_resolution,
-                                    raster.layers.clone(),
-                                    raster.annotations.clone(),
-                                ));
-                                app.tasks.add(CavityDetection::new(
-                                    result.config.clone(),
-                                    raster.layers.clone(),
-                                    raster.annotations.clone(),
-                                ));
+                                start_print_check(&mut app.tasks, &result.config, raster);
                             }
                             slice_preview
                         });
@@ -284,63 +255,14 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
 
             match &mut result.inner {
                 GenericSliceResult::Raster(raster) => {
-                    ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
-                        let state = &mut app.state;
-                        ui.horizontal(|ui| {
-                            let layer_digits = state.layer_count.1 as usize;
-                            DragValue::new(&mut state.preview_layer)
-                                .range(1..=state.layer_count.0)
-                                .custom_formatter(|n, _| {
-                                    format!("{:0>layer_digits$}/{}", n, state.layer_count.0)
-                                })
-                                .ui(ui);
-                            state.preview_layer += ui.button(CARET_UP).clicked() as usize;
-                            state.preview_layer -= ui.button(CARET_DOWN).clicked() as usize;
-
-                            ui.separator();
-                            if ui.button(concatcp!(CORNERS_IN, " Reset View")).clicked() {
-                                state.preview_offset = Vector2::zeros();
-                                state.preview_scale = 1.0;
-                            }
-
-                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                                let duration = human_duration(raster.print_time.convert());
-                                ui.add_space(2.0);
-                                ui.label(format!("{CLOCK} {duration}"));
-
-                                if !app.config.sliced.sidebar {
-                                    ui.separator();
-                                    let volume = raster.volume.get::<Centimeter>();
-                                    ui.label(format!("{DROP} {volume:.2} ml"));
-                                }
-
-                                ui.take_available_width();
-                            })
-                        });
-
-                        // Some printers have non square pixels, this option
-                        // allows you to select between seeing each pixel as a
-                        // square or as the actual shape on the printer.
-                        let platform = result.config.platform_resolution;
-                        let pixel_aspect = match app.config.sliced.coordinate_space {
-                            SlicePreviewCoordinateSpace::ScreenSpace => 1.0,
-                            SlicePreviewCoordinateSpace::WorldSpace => {
-                                let platform_size = (result.config.platform_size.xy())
-                                    .map(|x| x.get::<Milimeter>());
-                                let aspect = platform.cast::<f32>().component_div(&platform_size);
-                                (aspect.y / aspect.x).recip()
-                            }
-                        };
-
-                        slice_preview(
-                            state,
-                            ui,
-                            raster,
-                            platform,
-                            pixel_aspect,
-                            &app.config.sliced,
-                        );
-                    });
+                    let show_volume = !app.config.sliced.sidebar;
+                    raster_preview(
+                        (&mut app.state, &app.config.sliced),
+                        ui,
+                        &result.config,
+                        raster,
+                        show_volume,
+                    );
                 }
                 GenericSliceResult::Vector(_) => {
                     ui.add_space(8.0);
@@ -348,25 +270,7 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
                 }
             }
         } else {
-            Grid::new("slice_operation")
-                .num_columns(2)
-                .striped(true)
-                .show(ui, |ui| {
-                    ui.label("Slicing");
-                    ui.add(ProgressBar::new(progress.progress()).show_percentage());
-                    ui.end_row();
-
-                    let post_process = &slice_operation.post_processing_progress;
-                    for i in 0..post_process.count() {
-                        let progress = post_process[i].progress();
-                        let name = ["Hollowing", "Variable Layer Heights", "Elephant Foot Fixer"][i];
-                        if progress > 0.0 {
-                            ui.label(name);
-                            ui.add(ProgressBar::new(progress).show_percentage());
-                            ui.end_row();
-                        }
-                    }
-                });
+            slicing_progress(slice_operation, progress, ui);
         }
     } else {
         ui.horizontal_wrapped(|ui| {
@@ -379,6 +283,150 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     }
 
     discard.then(|| app.slice_operation = None);
+}
+
+/// Show the layer preview of the last slice, without the toolbar and the sidebar of the classic panel.
+///
+/// The function shows the progress while the slice runs. When no slice
+/// exists, the function shows nothing.
+pub fn preview(app: &mut App, ui: &mut Ui) {
+    let Some(slice_operation) = &app.slice_operation else {
+        return;
+    };
+    let progress = &slice_operation.progress;
+    let mut result = slice_operation.result();
+    let Some(result) = result.as_mut() else {
+        slicing_progress(slice_operation, progress, ui);
+        return;
+    };
+
+    reset_for_new_result(&mut app.state, &mut app.popup, result);
+    match &mut result.inner {
+        GenericSliceResult::Raster(raster) => {
+            raster_preview((&mut app.state, &app.config.sliced), ui, &result.config, raster, false);
+        }
+        GenericSliceResult::Vector(_) => {
+            ui.label("Vector formats don't yet support previews…");
+        }
+    }
+}
+
+/// Reset the layer preview once for a new slice result, and warn about slicing defects.
+fn reset_for_new_result(state: &mut UiState, popup: &mut PopupManager, result: &mut SliceResult) {
+    if !mem::take(&mut result.fresh) {
+        return;
+    }
+
+    state.preview_layer = 1;
+    state.last_preview_layer = 0;
+    state.preview_offset = Vector2::zeros();
+    state.preview_scale = 1.0;
+
+    if let GenericSliceData::Raster { data, .. } = result.slice_data()
+        && let Some((layers, _defects)) = error_stats(&data)
+    {
+        let body = SLICING_DEFECTS
+            .replace("{layers}", &layers.to_string())
+            .replace("{s}", if layers == 1 { "" } else { "s" });
+        popup.open(Popup::simple("Slicing Defects", PopupIcon::Warning, body));
+    }
+
+    let layers = result.inner.layers();
+    state.layer_count = (layers, layers.to_string().len() as u8);
+    state.preview_mode = PreviewMode::Static;
+}
+
+/// Start the island check and the cavity check on `raster`.
+pub fn start_print_check(tasks: &mut TaskManager, config: &SliceConfig, raster: &mut RasterSliceResult) {
+    raster.detected_islands = true;
+    tasks.add(IslandDetection::new(
+        config.platform_resolution,
+        raster.layers.clone(),
+        raster.annotations.clone(),
+    ));
+    tasks.add(CavityDetection::new(
+        config.clone(),
+        raster.layers.clone(),
+        raster.annotations.clone(),
+    ));
+}
+
+fn slicing_progress(slice_operation: &SliceOperation, progress: &Progress, ui: &mut Ui) {
+    Grid::new("slice_operation")
+        .num_columns(2)
+        .striped(true)
+        .show(ui, |ui| {
+            ui.label("Slicing");
+            ui.add(ProgressBar::new(progress.progress()).show_percentage());
+            ui.end_row();
+
+            let post_process = &slice_operation.post_processing_progress;
+            for i in 0..post_process.count() {
+                let progress = post_process[i].progress();
+                let name = ["Hollowing", "Variable Layer Heights", "Elephant Foot Fixer"][i];
+                if progress > 0.0 {
+                    ui.label(name);
+                    ui.add(ProgressBar::new(progress).show_percentage());
+                    ui.end_row();
+                }
+            }
+        });
+}
+
+/// Show the layer controls at the bottom and the layer image with its slider above them.
+fn raster_preview(
+    (state, sliced): (&mut UiState, &SlicedConfig),
+    ui: &mut Ui,
+    config: &SliceConfig,
+    raster: &mut RasterSliceResult,
+    show_volume: bool,
+) {
+    ui.with_layout(Layout::bottom_up(Align::Min), |ui| {
+        ui.horizontal(|ui| {
+            let layer_digits = state.layer_count.1 as usize;
+            DragValue::new(&mut state.preview_layer)
+                .range(1..=state.layer_count.0)
+                .custom_formatter(|n, _| format!("{:0>layer_digits$}/{}", n, state.layer_count.0))
+                .ui(ui);
+            state.preview_layer += ui.button(CARET_UP).clicked() as usize;
+            state.preview_layer -= ui.button(CARET_DOWN).clicked() as usize;
+
+            ui.separator();
+            if ui.button(concatcp!(CORNERS_IN, " Reset View")).clicked() {
+                state.preview_offset = Vector2::zeros();
+                state.preview_scale = 1.0;
+            }
+
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                let duration = human_duration(raster.print_time.convert());
+                ui.add_space(2.0);
+                ui.label(format!("{CLOCK} {duration}"));
+
+                if show_volume {
+                    ui.separator();
+                    let volume = raster.volume.get::<Centimeter>();
+                    ui.label(format!("{DROP} {volume:.2} ml"));
+                }
+
+                ui.take_available_width();
+            })
+        });
+
+        // Some printers have non square pixels, this option allows you to
+        // select between seeing each pixel as a square or as the actual shape
+        // on the printer.
+        let platform = config.platform_resolution;
+        let pixel_aspect = match sliced.coordinate_space {
+            SlicePreviewCoordinateSpace::ScreenSpace => 1.0,
+            SlicePreviewCoordinateSpace::WorldSpace => {
+                let platform_size = (config.platform_size.xy()).map(|x| x.get::<Milimeter>());
+                let aspect = platform.cast::<f32>().component_div(&platform_size);
+                (aspect.y / aspect.x).recip()
+            }
+        };
+
+        slice_preview(state, ui, raster, platform, pixel_aspect, sliced);
+    });
 }
 
 fn slice_preview(
@@ -566,7 +614,7 @@ fn name_popup(mainboard_id: String, data: Arc<Vec<u8>>) -> Popup {
     })
 }
 
-fn save_file(
+pub fn save_file(
     config: SliceConfig,
     preview: Arc<RgbaImage>,
     format: Format,
@@ -1084,7 +1132,7 @@ fn sidebar(operation: &SliceOperation, result: &mut SliceResult, app: SidebarApp
 ///
 /// Each line names the problem in words next to its color. A button per
 /// cavity moves the layer preview to the first layer of that cavity.
-fn print_check(raster: &RasterSliceResult, preview_layer: &mut usize, ui: &mut Ui) {
+pub fn print_check(raster: &RasterSliceResult, preview_layer: &mut usize, ui: &mut Ui) {
     if !raster.detected_islands {
         ui.label("Use Check Print above to look for islands, resin traps and suction cups.");
         return;

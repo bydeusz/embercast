@@ -13,8 +13,14 @@ pub mod popup;
 pub mod shortcuts;
 pub mod theme;
 pub mod tools;
+pub mod workflow;
 
 pub fn ui(app: &mut App, ctx: &Context) {
+    if !app.config.ui.classic_layout {
+        workflow::ui(app, ctx);
+        return;
+    }
+
     elements::ui(app, ctx);
 
     mem::take(&mut app.state.queue_reset_ui).then(|| app.panels.reset_ui());

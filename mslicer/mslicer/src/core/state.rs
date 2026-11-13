@@ -15,7 +15,11 @@ use crate::{
         project::model::{Model, ModelId},
         selected::{SelectedModel, SelectedPrinter, SelectedSupports},
     },
-    interface::{keybinds::Keybind, tools::Tools},
+    interface::{
+        keybinds::Keybind,
+        tools::Tools,
+        workflow::{RailTool, Step},
+    },
     render::util::MeshBuffers,
     util::misc::DefaultNum,
 };
@@ -64,6 +68,13 @@ pub struct UiState {
 
     pub tools: Tools,
     pub move_timeout: u32, // todo: having this in frames is fragile!
+
+    // embercast layout
+    pub step: Step,
+    pub rail_tool: RailTool,
+    pub show_print_settings: bool,
+    pub show_app_settings: bool,
+    pub pending_auto_supports: Vec<ModelId>,
 }
 
 pub struct PreviewModel {

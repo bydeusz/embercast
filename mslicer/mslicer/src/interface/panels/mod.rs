@@ -7,12 +7,12 @@ mod logs;
 mod models;
 mod notes;
 pub mod remote_print;
-mod slice_config;
-mod sliced;
-mod supports;
+pub mod slice_config;
+pub mod sliced;
+pub mod supports;
 mod tabs;
-mod viewport;
-mod workspace;
+pub mod viewport;
+pub mod workspace;
 
 use egui_dock::{DockState, Node, NodeIndex, Tree};
 
