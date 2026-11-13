@@ -15,6 +15,9 @@ use tools::supports::{
     set::{Pose, SupportSet},
 };
 
+/// The largest distance from a point of an overhang to its nearest support tip.
+const MAX_UNSUPPORTED_MM: f32 = 3.5;
+
 /// Return the volume of a closed mesh. The volume is negative if the faces point inward.
 fn signed_volume(mesh: &Mesh) -> f32 {
     mesh.faces()
@@ -67,6 +70,33 @@ fn cube_mesh(size: f32) -> Mesh {
         [3, 0, 4],
         [3, 4, 7],
     ];
+    Mesh::new_boxed_centered(vertices.into(), faces.into())
+}
+
+/// Return a mesh of a 20 x 20 x 2 mm plate with a 6 mm cube on top, as two overlapping closed boxes.
+///
+/// The bottom face of the cube lies inside the plate and points down.
+fn plate_with_cube_mesh() -> Mesh {
+    let boxes = [
+        (Vector3::new(-10.0, -10.0, 0.0), Vector3::new(10.0, 10.0, 2.0)),
+        (Vector3::new(-3.0, -3.0, 2.0), Vector3::new(3.0, 3.0, 8.0)),
+    ];
+    let corner_faces: [[u32; 3]; 12] = [
+        [0, 2, 1], [0, 3, 2], [4, 5, 6], [4, 6, 7], [0, 1, 5], [0, 5, 4],
+        [1, 2, 6], [1, 6, 5], [2, 3, 7], [2, 7, 6], [3, 0, 4], [3, 4, 7],
+    ];
+    let mut vertices = Vec::new();
+    let mut faces = Vec::new();
+    for (low, high) in boxes {
+        let first = vertices.len() as u32;
+        for (x, y, z) in [
+            (low.x, low.y, low.z), (high.x, low.y, low.z), (high.x, high.y, low.z), (low.x, high.y, low.z),
+            (low.x, low.y, high.z), (high.x, low.y, high.z), (high.x, high.y, high.z), (low.x, high.y, high.z),
+        ] {
+            vertices.push(Vector3::new(x, y, z));
+        }
+        faces.extend(corner_faces.map(|face| face.map(|i| i + first)));
+    }
     Mesh::new_boxed_centered(vertices.into(), faces.into())
 }
 
@@ -190,7 +220,7 @@ fn support_set_survives_saving_and_loading() {
     let mut ser = DynamicSerializer::new();
     set.serialize(&mut ser);
     let bytes = ser.into_inner();
-    let read = SupportSet::deserialize(&mut SliceDeserializer::new(&bytes));
+    let read = SupportSet::deserialize(&mut SliceDeserializer::new(&bytes)).unwrap();
 
     assert_eq!(read.len(), 2);
     for (a, b) in set.iter().zip(read.iter()) {
@@ -218,5 +248,55 @@ fn auto_placement_supports_the_bottom_of_a_raised_cube() {
         assert!(body_top.z < tip.z, "Tip at {tip} does not point down.");
         assert!(((tip - body_top).norm() - tip_length).abs() < 1e-3);
         assert!(body_bottom.z <= body_top.z && body_bottom.z >= 0.0);
+    }
+}
+
+#[test]
+fn support_count_larger_than_the_data_gives_an_error() {
+    let mut ser = DynamicSerializer::new();
+    SupportSet::default().serialize(&mut ser);
+    let mut bytes = ser.into_inner();
+    bytes[1..5].copy_from_slice(&u32::MAX.to_be_bytes());
+    assert!(SupportSet::deserialize(&mut SliceDeserializer::new(&bytes)).is_err());
+}
+
+#[test]
+fn every_point_of_an_overhanging_bottom_is_close_to_a_support() {
+    let mut mesh = cube_mesh(10.0);
+    mesh.set_position(Vector3::new(0.0, 0.0, 5.0));
+    let bvh = Bvh::build(mesh.inner(), Progress::new());
+    let half_edge = HalfEdgeMesh::build_from_mesh(mesh.inner());
+
+    let platform = Vector3::new(172.8, 102.4, 160.0).map(Milimeters::new);
+    let placement = AutoPlacement::new(PlacementConfig::default(), SupportPreset::MEDIUM, platform);
+    let tips: Vec<Vector2<f32>> = placement
+        .generate_supports(&mesh, &half_edge, &bvh, &Progress::new())
+        .into_iter()
+        .map(|[tip, _, _]| tip.xy())
+        .collect();
+
+    for step_x in 0..=10 {
+        for step_y in 0..=10 {
+            let point = Vector2::new(step_x as f32 - 5.0, step_y as f32 - 5.0);
+            let nearest = tips.iter().map(|tip| (tip - point).norm()).fold(f32::MAX, f32::min);
+            assert!(nearest <= MAX_UNSUPPORTED_MM, "Point {point} is {nearest} mm from the nearest support.");
+        }
+    }
+}
+
+#[test]
+fn no_supports_go_to_faces_inside_the_model() {
+    let mut mesh = plate_with_cube_mesh();
+    mesh.set_position(Vector3::new(0.0, 0.0, 5.0));
+    let bvh = Bvh::build(mesh.inner(), Progress::new());
+    let half_edge = HalfEdgeMesh::build_from_mesh(mesh.inner());
+
+    let platform = Vector3::new(172.8, 102.4, 160.0).map(Milimeters::new);
+    let placement = AutoPlacement::new(PlacementConfig::default(), SupportPreset::MEDIUM, platform);
+    let supports = placement.generate_supports(&mesh, &half_edge, &bvh, &Progress::new());
+
+    assert!(!supports.is_empty());
+    for [tip, _, _] in supports {
+        assert!((tip.z - 5.0).abs() < 1e-3, "Support tip at {tip} is not on the bottom of the plate.");
     }
 }

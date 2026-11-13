@@ -8,6 +8,9 @@ use crate::supports::{Support, SupportId};
 
 pub type FaceMap = HashMap<SupportId, Range<u32>>;
 
+/// The smallest and the largest number of sides of a support cylinder.
+pub const RESOLUTION_RANGE: (u32, u32) = (3, 128);
+
 /// The shape of new supports: the body, the tip that touches the model and the free space around the body.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SupportPreset {
@@ -100,7 +103,7 @@ pub fn build_support_mesh<'a>(
     let mut builder = MeshBuilder::new();
     let mut feet = Vec::new();
     let mut map = HashMap::new();
-    let precision = resolution.max(3);
+    let precision = resolution.clamp(RESOLUTION_RANGE.0, RESOLUTION_RANGE.1);
 
     for support in supports {
         let radius = support.radius;

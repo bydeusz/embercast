@@ -7,12 +7,17 @@ edition = "2024"
 name = "repair"
 path = "bin/repair.rs"
 
+[[bin]]
+name = "supports"
+path = "bin/supports.rs"
+
 [dependencies]
 common.workspace = true
 mesh_format.workspace = true
 slicer.workspace = true
 
 anyhow.workspace = true
+clap.workspace = true
 gerber_parser.workspace = true
 hound.workspace = true
 image.workspace = true

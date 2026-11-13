@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
 use common::container::ArrayCluster;
-use nalgebra::Vector3;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use nalgebra::{Vector2, Vector3};
 use slicer::geometry::{
     Ray,
     mesh::{HalfEdgeMesh, Mesh},
@@ -67,16 +68,23 @@ impl AutoPlacement {
             .collect()
     }
 
+    /// Return supports on the overhanging faces, about `face_support_spacing` apart.
+    ///
+    /// The function spreads sample points over the area under the overhanging
+    /// faces, not over the whole build plate. A vertical ray from each sample
+    /// point gives one support on each overhanging face that the ray hits.
     pub fn place_face_supports(
         &self,
         mesh: &Mesh,
         overhangs: &[(usize, Vector3<f32>)],
     ) -> Vec<SupportPlacement> {
         let mut out = Vec::new();
-        let bed_size = self.bed_size.xy().map(|x| x.raw());
+        let Some((low, high)) = overhang_area(mesh, overhangs) else {
+            return out;
+        };
 
-        for pos in quazirandom_rect_2d(bed_size, self.placement.face_support_spacing) {
-            let pos = pos - bed_size / 2.0;
+        for pos in quazirandom_rect_2d(high - low, self.placement.face_support_spacing) {
+            let pos = pos + low;
             let mut intersections = Vec::new();
             for (idx, _angle) in overhangs.iter() {
                 let ray = Ray {
@@ -199,4 +207,83 @@ impl AutoPlacement {
 
         overhangs
     }
+}
+
+/// Return the lowest and the highest X and Y of the overhanging faces in world space.
+fn overhang_area(mesh: &Mesh, overhangs: &[(usize, Vector3<f32>)]) -> Option<(Vector2<f32>, Vector2<f32>)> {
+    let mut points = overhangs
+        .iter()
+        .flat_map(|(face, _)| mesh.face(*face).map(|vertex| mesh.transform(&mesh.vertices()[vertex as usize]).xy()));
+    let first = points.next()?;
+    Some(points.fold((first, first), |(low, high), point| {
+        (low.inf(&point), high.sup(&point))
+    }))
+}
+
+/// The distance from an overhang to the point that the exposure test examines, in mm.
+const PROBE_DISTANCE: f32 = 0.05;
+/// A small shift of the probe, so that the vertical ray does not run exactly along a mesh edge.
+const PROBE_JITTER: Vector2<f32> = Vector2::new(1.414_213_5e-4, 1.732_050_8e-4);
+
+/// Return the overhangs of `placements` that are on the outside of the model.
+///
+/// A model can have closed parts that overlap, and a part can have a down
+/// facing face inside another part. A support to that face would start
+/// inside the model. For each placement, the function moves a short distance
+/// out along the normal and counts how many parts hold that point. The
+/// function keeps the placement only if no part holds the point.
+pub fn exposed_placements(mesh: &Mesh, placements: Vec<SupportPlacement>) -> Vec<SupportPlacement> {
+    let vertices: Vec<Vector3<f32>> = mesh.vertices().iter().map(|vertex| mesh.transform(vertex)).collect();
+    let triangles: Vec<[Vector3<f32>; 3]> = mesh
+        .faces()
+        .iter()
+        .map(|face| face.map(|i| vertices[i as usize]))
+        .collect();
+
+    placements
+        .into_par_iter()
+        .filter(|placement| {
+            let probe = placement.point + placement.normal * PROBE_DISTANCE;
+            let probe = (probe.xy() + PROBE_JITTER).push(probe.z);
+            winding_below(&triangles, probe) <= 0
+        })
+        .collect()
+}
+
+/// Return the number of closed parts that hold `point`.
+///
+/// The function follows a vertical ray down from `point`. A face that points
+/// down is the bottom of a part above the end of the ray, so the count goes
+/// up by one. A face that points up is the top of a part, so the count goes
+/// down by one.
+fn winding_below(triangles: &[[Vector3<f32>; 3]], point: Vector3<f32>) -> i32 {
+    let mut winding = 0;
+    for [a, b, c] in triangles {
+        let Some(z) = vertical_hit([*a, *b, *c], point.xy()) else {
+            continue;
+        };
+        if z >= point.z {
+            continue;
+        }
+        let normal_z = (b - a).cross(&(c - a)).z;
+        if normal_z < 0.0 {
+            winding += 1;
+        } else if normal_z > 0.0 {
+            winding -= 1;
+        }
+    }
+    winding
+}
+
+/// Return the height where the vertical line through `point` meets the triangle, or `None` if it misses.
+fn vertical_hit([a, b, c]: [Vector3<f32>; 3], point: Vector2<f32>) -> Option<f32> {
+    let (a2, b2, c2) = (a.xy(), b.xy(), c.xy());
+    let area = (b2 - a2).perp(&(c2 - a2));
+    if area.abs() < f32::EPSILON {
+        return None;
+    }
+    let u = (c2 - b2).perp(&(point - b2)) / area;
+    let v = (a2 - c2).perp(&(point - c2)) / area;
+    let w = 1.0 - u - v;
+    (u >= 0.0 && v >= 0.0 && w >= 0.0).then(|| a.z * u + b.z * v + c.z * w)
 }

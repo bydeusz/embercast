@@ -1,3 +1,4 @@
+use anyhow::{Result, ensure};
 use common::{
     serde::{Deserializer, SerdeExt, Serializer},
     units::Milimeter,
@@ -69,6 +70,35 @@ impl Default for Pose {
             rotation: Vector3::zeros(),
         }
     }
+}
+
+const SUPPORT_SIZE: usize = 3 * 3 * 4 + 2 * 4;
+
+fn read_supports<T: Deserializer>(des: &mut T) -> Result<Vec<Support>> {
+    let count = des.read_u32_be() as usize;
+    let remaining = des.size().saturating_sub(des.pos());
+    ensure!(
+        count.saturating_mul(SUPPORT_SIZE) <= remaining,
+        "Support count {count} does not fit in the file."
+    );
+
+    let mut supports = Vec::with_capacity(count);
+    for _ in 0..count {
+        let support = Support {
+            id: SupportId::new(),
+            points: [(); 3].map(|_| Vector3::deserialize(des)),
+            tip_radius: des.read_f32_be(),
+            radius: des.read_f32_be(),
+        };
+        let finite = support.points.iter().all(|point| point.iter().all(|x| x.is_finite()));
+        ensure!(
+            finite && support.tip_radius.is_finite() && support.radius.is_finite(),
+            "Support has a value that is not a finite number."
+        );
+        ensure!(support.tip_radius > 0.0 && support.radius > 0.0, "Support has a radius of 0 or less.");
+        supports.push(support);
+    }
+    Ok(supports)
 }
 
 fn new_support(preset: &SupportPreset, points: [Vector3<f32>; 3]) -> Support {
@@ -166,25 +196,19 @@ impl SupportSet {
         }
     }
 
-    pub fn deserialize<T: Deserializer>(des: &mut T) -> Self {
+    /// Read a support set that [`SupportSet::serialize`] wrote.
+    ///
+    /// The function returns an error if a support count does not fit in the
+    /// rest of the data, or if a value is not a finite number. Thus a damaged
+    /// file cannot make the app reserve a very large amount of memory.
+    pub fn deserialize<T: Deserializer>(des: &mut T) -> Result<Self> {
         let made_for = des.read_bool().then(|| Pose::deserialize(des));
-        let mut read_list = || {
-            let count = des.read_u32_be();
-            (0..count)
-                .map(|_| Support {
-                    id: SupportId::new(),
-                    points: [(); 3].map(|_| Vector3::deserialize(des)),
-                    tip_radius: des.read_f32_be(),
-                    radius: des.read_f32_be(),
-                })
-                .collect::<Vec<_>>()
-        };
-        let auto = read_list();
-        let manual = read_list();
-        Self {
+        let auto = read_supports(des)?;
+        let manual = read_supports(des)?;
+        Ok(Self {
             auto,
             manual,
             made_for,
-        }
+        })
     }
 }

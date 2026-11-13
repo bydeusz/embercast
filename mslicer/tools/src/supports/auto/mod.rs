@@ -11,7 +11,7 @@ use slicer::geometry::{
 };
 use tracing::info;
 
-use crate::supports::mesh::SupportPreset;
+use crate::supports::{auto::detect::exposed_placements, mesh::SupportPreset};
 
 pub mod detect;
 pub mod quazirandom;
@@ -78,6 +78,7 @@ impl AutoPlacement {
             edges.len()
         );
         overhangs.extend([points, faces, edges].into_iter().flatten());
+        let overhangs = exposed_placements(mesh, overhangs);
 
         progress.set_total(overhangs.len() as u64);
         let radius = (self.support.radius + self.support.margin).get::<Milimeter>();
@@ -154,11 +155,11 @@ fn intersect_cylinder(
 impl Default for PlacementConfig {
     fn default() -> Self {
         Self {
-            min_spacing: 5.0,
+            min_spacing: 1.5,
             max_angle: 30.0,
-            face_support_spacing: 50.0,
+            face_support_spacing: 2.5,
             edge_angle_delta: 0.1,
-            edge_support_spacing: 20.0,
+            edge_support_spacing: 2.5,
         }
     }
 }

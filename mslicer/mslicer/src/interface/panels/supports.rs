@@ -5,7 +5,10 @@ use const_format::concatcp;
 use egui::{Button, ComboBox, Context, DragValue, Ui, Widget};
 use egui_phosphor::regular::{LINE_SEGMENT, SELECTION_INVERSE, SPARKLE, TRASH};
 use slicer::geometry::mesh::MeshBuilder;
-use tools::supports::{auto::route_support, mesh::SupportPreset};
+use tools::supports::{
+    auto::route_support,
+    mesh::{RESOLUTION_RANGE, SupportPreset},
+};
 
 use crate::{
     core::App,
@@ -153,7 +156,9 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     ui.collapsing("Mesh", |ui| {
         grid("mesh").show(ui, |ui| {
             ui.label("Resolution");
-            DragValue::new(&mut app.project.support_config.mesh_resolution).ui(ui);
+            DragValue::new(&mut app.project.support_config.mesh_resolution)
+                .range(RESOLUTION_RANGE.0..=RESOLUTION_RANGE.1)
+                .ui(ui);
             ui.end_row();
         });
     });

@@ -5642,6 +5642,7 @@ name = "tools"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
  "common",
  "gerber_parser",
  "hound",

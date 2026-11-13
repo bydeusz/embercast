@@ -20,7 +20,11 @@ use slicer::{
         elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
     },
 };
-use tools::supports::{auto::PlacementConfig, mesh::SupportPreset, set::SupportSet};
+use tools::supports::{
+    auto::PlacementConfig,
+    mesh::{RESOLUTION_RANGE, SupportPreset},
+    set::SupportSet,
+};
 
 /// Project format version. Value should be incremented whenever the save format
 /// changes, even in development so anyone using the dev/prerelease versions
@@ -257,7 +261,7 @@ impl Project {
         let support_config = if version >= 17 {
             let config = SupportConfig::deserialize(des);
             for model in models.iter_mut() {
-                model.supports.restore(SupportSet::deserialize(des));
+                model.supports.restore(SupportSet::deserialize(des)?);
             }
             config
         } else {
@@ -338,7 +342,7 @@ impl SupportConfig {
             tip_radius: length(),
             tip_length: length(),
         };
-        let mesh_resolution = des.read_u32_be();
+        let mesh_resolution = des.read_u32_be().clamp(RESOLUTION_RANGE.0, RESOLUTION_RANGE.1);
         let mut length = || Milimeters::new(des.read_f32_be());
         Self {
             auto_placement,
