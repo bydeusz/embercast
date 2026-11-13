@@ -5,8 +5,8 @@
 use std::sync::Arc;
 
 use egui::{
-    Color32, Context, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, Shadow, Stroke,
-    TextStyle, Visuals,
+    Color32, Context, CornerRadius, FontData, FontDefinitions, FontFamily, FontId, RichText, Shadow,
+    Stroke, TextStyle, Visuals,
     style::{Selection, WidgetVisuals, Widgets},
 };
 
@@ -163,6 +163,16 @@ pub fn visuals() -> Visuals {
         slider_trailing_fill: true,
         ..Visuals::dark()
     }
+}
+
+/// The extra space between the letters of a label, in points.
+pub const LABEL_TRACKING: f32 = 1.4;
+
+/// Return `text` as a label of the design system: capitals in Barlow Semi Condensed with wide letter spacing.
+pub fn label(text: &str) -> RichText {
+    RichText::new(text.to_uppercase())
+        .family(FontFamily::Name(LABEL.into()))
+        .extra_letter_spacing(LABEL_TRACKING)
 }
 
 /// Return `color` as red, green and blue between 0 and 1, for the 3D renderer.

@@ -15,7 +15,7 @@ use crate::{
     interface::{
         components::{labeled_separator, link_button},
         elements::welcome,
-        theme::color,
+        theme::{self, color},
         panels::Tab,
         popup::confirm_unsaved,
         shortcuts::{self, Shortcut},
@@ -59,7 +59,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 ui.separator();
 
                 ui.style_mut().spacing.item_spacing.x = 6.0;
-                ui.menu_button(concatcp!(FILE_TEXT, " File"), |ui| {
+                ui.menu_button(theme::label(concatcp!(FILE_TEXT, " File")), |ui| {
                     ui.set_width(150.0);
 
                     labeled_separator(ui, "Import");
@@ -126,7 +126,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     menu_button((ui, app, ctx), &shortcuts::QUIT_SHORTCUT, "Quit");
                 });
 
-                ui.menu_button(concatcp!(GIT_DIFF, " Edit"), |ui| {
+                ui.menu_button(theme::label(concatcp!(GIT_DIFF, " Edit")), |ui| {
                     ui.set_width(150.0);
 
                     labeled_separator(ui, "History");
@@ -153,7 +153,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     });
                 });
 
-                ui.menu_button(concatcp!(HAMMER, " Tools"), |ui| {
+                ui.menu_button(theme::label(concatcp!(HAMMER, " Tools")), |ui| {
                     ui.set_width(150.0);
                     labeled_separator(ui, "Auto Layout");
                     menu_button((ui, app, ctx), &shortcuts::LAYOUT_SHORTCUT, "Quick Layout");
@@ -196,7 +196,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     });
                 });
 
-                ui.menu_button(concatcp!(CARDS, " View"), |ui| {
+                ui.menu_button(theme::label(concatcp!(CARDS, " View")), |ui| {
                     ui.set_width(150.0);
 
                     labeled_separator(ui, "Actions");
@@ -210,7 +210,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     }
                 });
 
-                ui.menu_button(concatcp!(LIFEBUOY, " Help"), |ui| {
+                ui.menu_button(theme::label(concatcp!(LIFEBUOY, " Help")), |ui| {
                     link_button(ui, "Source Code", welcome::EMBERCAST_LINK);
                     link_button(ui, "Bug Report", LINK_REPORT_BUG);
                     link_button(ui, "mslicer Guide", LINK_MSLICER_DOCS);
@@ -223,7 +223,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                 ui.add_enabled_ui(!app.is_slicing(), |ui| {
                     let shortcut = app.config.keybinds.get(shortcuts::SLICE_SHORTCUT.keybind);
                     let slice_button = ui.add(
-                        Button::new(concatcp!(STACK, " Slice"))
+                        Button::new(theme::label(concatcp!(STACK, " Slice")))
                             .shortcut_text(ctx.format_shortcut(&shortcut)),
                     );
                     slice_button.clicked().then(|| app.slice());

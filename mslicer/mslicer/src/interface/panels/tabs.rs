@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::core::App;
 use crate::interface::panels::*;
+use crate::interface::theme;
 
 pub struct Tabs<'a> {
     pub app: &'a mut App,
@@ -54,7 +55,7 @@ impl TabViewer for Tabs<'_> {
     type Tab = Tab;
 
     fn title(&mut self, tab: &mut Self::Tab) -> WidgetText {
-        tab.name().into()
+        theme::label(tab.name()).into()
     }
 
     fn ui(&mut self, ui: &mut Ui, tab: &mut Self::Tab) {
