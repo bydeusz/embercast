@@ -30,6 +30,16 @@ Waar je op moet letten:
 3. Hangt het plaatje aan de supports, of is het (deels) van de supports losgescheurd en op de FEP blijven plakken?
 4. Gaan de supports goed los van de onderkant van het plaatje, en hoe zien de contactpunten eruit (putjes, bultjes)?
 
+**4. Testprint `testprints/embercast-test-3.cxdlp` (pas na een geslaagde testprint 2).**
+- Wat het is: een kubus van 20 mm, hol gemaakt met een wand van 2 mm, pilaren om de 4 mm en 2 afvoergaten van 2,5 mm in de bodem. De kubus staat 5 mm hoog op 82 supports (Medium) met een raft.
+- Printtijd volgens UVtools ongeveer 2 uur en 14 minuten, ongeveer 5,3 ml hars (massief zou 8,9 ml zijn), 500 lagen.
+- Gecontroleerd met UVtools: geen harsvallen en geen zuignappen. UVtools meldt het plafond van de holte als 16 overhangende vakjes van 3 × 3 mm tussen de pilaren. Dat is bij deze maat normaal.
+
+Waar je op moet letten:
+1. Is de kubus heel gebleven, zonder scheuren of gaten in de wanden?
+2. Komt er hars uit de twee gaatjes in de onderkant als je hem na het printen kantelt? Spoel de holte goed na, ook bij het uitharden.
+3. Zaag of breek hem na het uitharden eventueel door: is de wand ongeveer 2 mm, staan de pilaren er, en is het plafond dicht en glad genoeg?
+
 Ik werk intussen verder aan de stappen die hier niet van afhangen.
 
 ## Stand van zaken
@@ -40,8 +50,8 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 | 1 | CXDLP-export | gebouwd en met UVtools gecontroleerd, wacht op testprint |
 | 2 | Printer-preset Halot One Plus + Siraya Build | klaar |
 | 3 | Supports verbeteren | gebouwd, wacht op testprint 2 |
-| 4 | Hollowing + drain holes | bezig |
-| 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | open |
+| 4 | Hollowing + drain holes | gebouwd, wacht op testprint 3 |
+| 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | bezig |
 | 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | open |
 | 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | open |
 
@@ -61,13 +71,21 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
   - Handmatig plaatsen (klikken op het model) en verwijderen (selecteren, Delete) bestonden al in mslicer.
   - Hulpprogramma `mslicer/target/release/supports` (crate `tools`): plaatst automatisch supports onder een STL en schrijft model, supports en raft samen weg als één STL. Zo kan ik supports zonder de app via de slicer en UVtools controleren.
 
+- Stap 4, hollowing (`mslicer/slicer/src/post_process/hollow.rs`):
+  - Werkt op de gesneden lagen, als eerste nabewerking. Een grof voxelraster (hooguit 0,25 mm) over het verlichte deel, de exacte afstand tot de buitenkant, en alles wat verder weg ligt dan de wanddikte wordt leeg. De wand is nooit dunner dan ingesteld (hooguit één voxel dikker).
+  - Dunne delen zoals supports en de raft blijven vanzelf massief.
+  - Pilaren (optioneel): vierkante staanders met instelbare afstand en breedte. Die sluiten geen hars in, een rooster van wanden zou dat wel doen.
+  - Afvoergaten: automatisch op de laagste laag van de holte (het dichtst bij de bouwplaat), recht omlaag door de bodemwand. Een gat stopt bij de eerste laag die grotendeels leeg is, zodat supports eronder heel blijven.
+  - In de app: paneel Slice Config, Post Processors, "Hollowing". Undo werkt, en de instellingen staan in het projectbestand (versie 18).
+  - CLI: `--hollow <wand mm> --drain-holes <aantal> --drain-hole-diameter <mm> --pillar-spacing <mm>`.
+
 ## Nu bezig
 
-Stap 4: hollowing en drain holes.
+Stap 5: analyse (islands, resin traps, overhangs, laagvoorvertoning).
 
 ## Volgende stap
 
-Stap 5: analyse (islands, resin traps, overhangs, laagvoorvertoning).
+Stap 6: interface in de Dark Fantasy-stijl en hernoemen naar Embercast.
 
 ## Hoe maak je het testbestand opnieuw
 
@@ -77,6 +95,15 @@ Vanuit de hoofdmap, na `cargo build -r -p slicer` in `mslicer/`. De CLI gebruikt
 python3 testprints/make_test_model.py testprints/embercast-test-1.stl
 mslicer/target/release/slicer --mesh testprints/embercast-test-1.stl testprints/embercast-test-1.cxdlp
 /Applications/UVtools.app/Contents/MacOS/UVtoolsCmd print-issues testprints/embercast-test-1.cxdlp
+```
+
+Testprint 3:
+
+```
+python3 testprints/make_test_model.py testprints/cube-20mm.stl cube
+mslicer/target/release/supports --preset medium testprints/cube-20mm.stl testprints/embercast-test-3.stl
+mslicer/target/release/slicer --mesh testprints/embercast-test-3.stl --hollow 2.0 --drain-holes 2 \
+  --drain-hole-diameter 2.5 --pillar-spacing 4 testprints/embercast-test-3.cxdlp
 ```
 
 Testprint 2 (na `cargo build -r -p tools --bin supports`):
@@ -105,6 +132,7 @@ mslicer/target/release/slicer --mesh testprints/embercast-test-2.stl testprints/
 - 2026-11-13: `SliceConfig::default()` is nu de Halot One Plus met het Siraya-profiel (was een Elegoo Saturn). Je bestaande mslicer-instellingen van stap 0 bewaren nog de oude standaard; die verdwijnen vanzelf bij het hernoemen naar Embercast in stap 6, of met "Reset Config" in het paneel Workspace.
 - 2026-11-13: het inlezen van `.cxdlp` controleert vóór elk blok of er genoeg bytes zijn, zodat een kapot bestand een foutmelding geeft en de app niet laat crashen.
 - 2026-11-13: supports worden opgeslagen ten opzichte van de positie van het model (`tools/src/supports/set.rs`). Bij een andere schaal of draaiing vervallen ze, in plaats van dat ik ze probeer mee te draaien.
+- 2026-11-13: hollowing gebeurt op de gesneden lagen en niet op het 3D-model. Zo blijft het oppervlak van het model precies zoals het was, en kunnen gaten en holtes geen kapotte mesh opleveren. Nadeel: hollowing geldt voor alles op de plaat, niet per model, en je ziet de holte pas na het slicen in de laagvoorvertoning.
 - 2026-11-13: preset bepaalt de vorm van een support, de dichtheid staat apart onder "Auto Placement". Zo blijven de twee los te regelen.
 
 ## Bekende beperkingen
@@ -114,5 +142,7 @@ mslicer/target/release/slicer --mesh testprints/embercast-test-2.stl testprints/
 
 - Het inlezen van projectbestanden (uit mslicer) begrenst nog niet het aantal modellen en meshes in een bestand. Een gemanipuleerd projectbestand kan de app dus nog laten vastlopen. Voor de nieuwe supportdelen is dat wel begrensd.
 - UVtools meldt bij een platte onderkant op supports altijd een "eiland". Extra supports zetten op plekken die in de lagen echt los hangen, hoort bij stap 5.
+- Afvoergaten worden alleen automatisch geplaatst, recht omlaag. Zelf een plek voor een gat aanklikken kan nog niet.
+- Een model met holte dat direct op de bouwplaat staat, krijgt gaten die tegen de plaat uitkomen. Die zijn dan dicht. Zet holle modellen op supports.
 - CXDLP kent één terugtreksnelheid voor alle lagen. Het profiel heeft 150 mm/min voor de bodemlagen en 180 mm/min daarna; in het bestand komt 180 mm/min (3 mm/s).
 - CXDLP slaat snelheden op in hele mm/s, bodembelichting en liftafstand in hele seconden en millimeters, en de normale belichting in tienden van een seconde.
