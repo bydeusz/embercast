@@ -27,8 +27,8 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 |---|---|---|
 | 0 | Omgeving (Rust, mslicer, eerste build) | klaar |
 | 1 | CXDLP-export | gebouwd en met UVtools gecontroleerd, wacht op testprint |
-| 2 | Printer-preset Halot One Plus + Siraya Build | open |
-| 3 | Supports verbeteren | open |
+| 2 | Printer-preset Halot One Plus + Siraya Build | klaar |
+| 3 | Supports verbeteren | bezig |
 | 4 | Hollowing + drain holes | open |
 | 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | open |
 | 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | open |
@@ -39,27 +39,23 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 - Stap 1: crate `mslicer/format/cxdlp_format` (schrijven en inlezen van CXDLP v3, met 26 tests). Aangesloten op de formatenlijst, de CLI (`slicer ... uitvoer.cxdlp`), het Save-menu van de app en het openen van gesliceerde bestanden.
 - Controle: UVtools leest het bestand, het controlegetal klopt, en `UVtoolsCmd compare` zegt "Files matches" tegen de `.cxdlp` die UVtools zelf maakt van dezelfde lagen. De lijndata van alle lagen is byte voor byte gelijk.
 - Testmodel: `testprints/make_test_model.py` maakt `embercast-test-1.stl`. Het printbestand maak je opnieuw met het commando onder "Hoe maak je het testbestand opnieuw".
+- Stap 2: printer `Creality HALOT-ONE PLUS` in de printerlijst van de app. Harsprofielen staan in `mslicer/common/src/slice/profiles.rs`, met als eerste "Siraya Tech Build 50 µm". In het paneel Slice Config kies je het profiel bij "Resin Profile". Een test vergelijkt het profiel met `profiles/halot-one-plus_siraya-build-50um.json`. De standaardinstellingen van de app en van de CLI zijn nu deze printer met dit profiel.
 
 ## Nu bezig
 
-Stap 2: printer-preset Halot One Plus en het Siraya Build-profiel.
+Stap 3: supports (presets licht/middel/zwaar, raft, handmatig plaatsen en verwijderen).
 
 ## Volgende stap
 
-Stap 3: supports (presets licht/middel/zwaar, raft, handmatig plaatsen en verwijderen).
+Stap 4: hollowing en drain holes.
 
 ## Hoe maak je het testbestand opnieuw
 
-Vanuit de hoofdmap, na `cargo build -r -p slicer` in `mslicer/`:
+Vanuit de hoofdmap, na `cargo build -r -p slicer` in `mslicer/`. De CLI gebruikt standaard de Halot One Plus met het Siraya-profiel:
 
 ```
 python3 testprints/make_test_model.py testprints/embercast-test-1.stl
-mslicer/target/release/slicer --platform-resolution "4320, 2560" --platform-size "172.8, 102.4, 160" \
-  --layer-height 0.05 --first-layers 6 --transition-layers 0 \
-  --exposure-time 3.2 --exposure-delay 4 --exposure-pwm 100 --lift-distance 6 --lift-speed 60 --retract-speed 180 \
-  --first-exposure-time 35 --first-exposure-delay 4 --first-exposure-pwm 100 --first-lift-distance 6 \
-  --first-lift-speed 60 --first-retract-speed 150 \
-  --mesh testprints/embercast-test-1.stl testprints/embercast-test-1.cxdlp
+mslicer/target/release/slicer --mesh testprints/embercast-test-1.stl testprints/embercast-test-1.cxdlp
 /Applications/UVtools.app/Contents/MacOS/UVtoolsCmd print-issues testprints/embercast-test-1.cxdlp
 ```
 
@@ -79,6 +75,7 @@ mslicer/target/release/slicer --platform-resolution "4320, 2560" --platform-size
 - 2026-11-13: in het blok `SlicerInfoV3` schrijf ik dezelfde waarden als UVtools (onder meer twee aan/uit-vlaggen op 1, alle compensatiewaarden 0). UVtools-bestanden printen bewezen op Halot-printers.
 - 2026-11-13: het oppervlak per laag (dat de printer bij elke laag krijgt) is het pixeloppervlak van de grootste vorm met de gaten erin meegeteld. UVtools meet langs de rand en komt ongeveer 1% lager uit. Wat de printer met dit getal doet is niet bekend.
 - 2026-11-13: de CLI zet modellen nu net als de app een halve laag omlaag, zodat elke laag in het midden wordt gesneden. Zonder dat bleef laag 0 van de theepot leeg.
+- 2026-11-13: `SliceConfig::default()` is nu de Halot One Plus met het Siraya-profiel (was een Elegoo Saturn). Je bestaande mslicer-instellingen van stap 0 bewaren nog de oude standaard; die verdwijnen vanzelf bij het hernoemen naar Embercast in stap 6, of met "Reset Config" in het paneel Workspace.
 - 2026-11-13: het inlezen van `.cxdlp` controleert vóór elk blok of er genoeg bytes zijn, zodat een kapot bestand een foutmelding geeft en de app niet laat crashen.
 
 ## Bekende beperkingen
