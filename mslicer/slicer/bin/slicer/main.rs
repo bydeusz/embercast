@@ -91,6 +91,7 @@ fn main() -> Result<()> {
     encoding_progress.set_total(total as u64);
 
     let now = Instant::now();
+    let hollow = args.hollow();
     let preview = if let Some(path) = args.preview {
         ImageReader::open(path)?.decode()?.to_rgba8()
     } else {
@@ -98,7 +99,10 @@ fn main() -> Result<()> {
     };
 
     let handle = thread::spawn(clone!([{ encoding_progress } as p], move || {
-        let layers = slicer.slice_raster();
+        let mut layers = slicer.slice_raster();
+        if let Some(hollow) = hollow {
+            hollow.post_slice(&slicer.slice_config, &mut layers, Progress::new());
+        }
         let voxels = (layers.iter())
             .flat_map(|x| x.data.iter().filter(|x| x.value != 0).map(|x| x.length))
             .sum::<u64>();

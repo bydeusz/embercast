@@ -4,7 +4,7 @@ use common::{
     units::{Milimeter, Milimeters},
 };
 use nalgebra::Vector3;
-use slicer::geometry::mesh::Mesh;
+use slicer::{geometry::mesh::Mesh, post_process::hollow::Hollow};
 use tools::supports::mesh::SupportPreset;
 
 use crate::core::project::{Project, model::Model};
@@ -91,4 +91,19 @@ fn loaded_supports_still_reach_the_build_plate() {
         .map(|vertex| mesh.transform(vertex).z)
         .fold(f32::MAX, f32::min);
     assert!(lowest.abs() < 1e-4, "Supports end at {lowest} and not on the plate.");
+}
+
+#[test]
+fn hollow_settings_survive_saving_and_loading() {
+    let mut project = project_with_supports();
+    project.post_processing.hollow = Hollow {
+        enabled: true,
+        wall_thickness: 1.6,
+        pillar_spacing: 4.0,
+        pillar_width: 0.8,
+        drain_holes: 3,
+        drain_hole_diameter: 2.0,
+    };
+    let loaded = save_and_load(&project);
+    assert_eq!(loaded.post_processing.hollow, project.post_processing.hollow);
 }

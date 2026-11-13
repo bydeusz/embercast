@@ -13,7 +13,8 @@ use nalgebra::{Vector2, Vector3};
 use slicer::{
     geometry::mesh::MeshId,
     post_process::{
-        elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
+        elephant_foot_fixer::ElephantFootFixer, hollow::Hollow,
+        variable_layer_height::VariableLayerHeight,
     },
 };
 
@@ -84,6 +85,7 @@ pub enum SliceConfigAction {
     ExposureRemap(ExposureRemap),
     VariableLayerHeight(VariableLayerHeight),
     ElephantFootFixer(ElephantFootFixer),
+    Hollow(Hollow),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -266,6 +268,7 @@ impl SliceConfigAction {
             Self::ExposureRemap(_) => ActionDescription::new("Changed Exposure Remapping"),
             Self::VariableLayerHeight(_) => ActionDescription::new("Changed Variable Layer Height"),
             Self::ElephantFootFixer(_) => ActionDescription::new("Changed Elephant Foot Fixer"),
+            Self::Hollow(_) => ActionDescription::new("Changed Hollowing"),
         }
     }
 
@@ -312,6 +315,7 @@ impl SliceConfigAction {
                 &mut post_processing.elephant_foot_fixer,
                 value,
             )),
+            Self::Hollow(value) => Self::Hollow(mem::replace(&mut post_processing.hollow, value)),
         })
     }
 }

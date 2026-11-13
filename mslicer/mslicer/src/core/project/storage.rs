@@ -17,7 +17,8 @@ use common::{
 use slicer::{
     geometry::mesh::{Mesh, MeshInner},
     post_process::{
-        elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
+        elephant_foot_fixer::ElephantFootFixer, hollow::Hollow,
+        variable_layer_height::VariableLayerHeight,
     },
 };
 use tools::supports::{
@@ -30,6 +31,7 @@ use tools::supports::{
 /// changes, even in development so anyone using the dev/prerelease versions
 /// don't ruin their projects.
 ///
+/// - v18 (Embercast) — Store the hollowing settings in the post processing.
 /// - v17 (Embercast) — Store the support settings and the supports of each
 ///   model.
 /// - v16 (v0.10.0) — Added project notes and an ignored section with info about
@@ -54,7 +56,7 @@ use tools::supports::{
 /// - v3 (v0.6.0) — Added the PWM value to SliceConfig -> ExposureConfig.
 /// - v2 (v0.5.0) — A complete rewrite using a custom serilizer/deserilizer
 ///   because of the bincode drama...
-const VERSION: u16 = 17;
+const VERSION: u16 = 18;
 const DESCRIPTION: &str = concatcp!(
     "Saved by mslicer v",
     crate::VERSION,
@@ -359,6 +361,7 @@ impl PostProcessing {
     pub fn serialize<T: Serializer>(&self, ser: &mut T) {
         self.variable_layer_height.serialize(ser);
         self.elephant_foot_fixer.serialize(ser);
+        self.hollow.serialize(ser);
     }
 
     pub fn deserialize<T: Deserializer>(des: &mut T, version: u16) -> Self {
@@ -370,6 +373,11 @@ impl PostProcessing {
                 VariableLayerHeight::deserialize(des, version)
             },
             elephant_foot_fixer: ElephantFootFixer::deserialize(des),
+            hollow: if version < 18 {
+                Hollow::default()
+            } else {
+                Hollow::deserialize(des)
+            },
         }
     }
 }

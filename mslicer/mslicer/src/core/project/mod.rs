@@ -11,7 +11,8 @@ use common::{
     units::{Milimeter, Milimeters},
 };
 use slicer::post_process::{
-    elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
+    elephant_foot_fixer::ElephantFootFixer, hollow::Hollow,
+    variable_layer_height::VariableLayerHeight,
 };
 use tools::supports::{
     auto::PlacementConfig,
@@ -60,6 +61,7 @@ pub struct Collection {
 pub struct PostProcessing {
     pub variable_layer_height: VariableLayerHeight,
     pub elephant_foot_fixer: ElephantFootFixer,
+    pub hollow: Hollow,
 }
 
 #[derive(Default, Clone)]
@@ -157,12 +159,13 @@ impl PostProcessing {
         &self,
         config: &SliceConfig,
         layers: &mut Vec<Layer>,
-        progress: CombinedProgress<2>,
+        progress: CombinedProgress<3>,
     ) {
+        self.hollow.post_slice(config, layers, progress[0].clone());
         self.variable_layer_height
-            .post_slice(config, layers, progress[0].clone());
-        self.elephant_foot_fixer
             .post_slice(config, layers, progress[1].clone());
+        self.elephant_foot_fixer
+            .post_slice(config, layers, progress[2].clone());
     }
 }
 

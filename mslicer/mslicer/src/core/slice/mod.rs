@@ -35,7 +35,7 @@ pub struct SliceOperation {
 pub struct SliceOperationInner {
     start_time: Instant,
     pub progress: Progress,
-    pub post_processing_progress: CombinedProgress<2>,
+    pub post_processing_progress: CombinedProgress<3>,
     pub result: Mutex<Option<SliceResult>>,
 
     pub previews: Mutex<Option<PreviewImage>>,
@@ -55,7 +55,7 @@ pub struct InteractivePreviews {
 impl SliceOperation {
     pub fn new(
         slice: Progress,
-        post_process: CombinedProgress<2>,
+        post_process: CombinedProgress<3>,
         interactive_previews: Option<InteractivePreviews>,
     ) -> Self {
         Self {

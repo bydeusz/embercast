@@ -8,6 +8,7 @@ use common::{
 };
 use nalgebra::{ArrayStorage, Const, Matrix, Scalar, U1, Vector2, Vector3};
 use num_integer::cbrt;
+use slicer::post_process::hollow::Hollow;
 
 /// mslicer command line interface.
 #[derive(Debug, Parser)]
@@ -75,6 +76,20 @@ pub struct Args {
     /// The speed to retract (move down) the platform after exposing each first
     /// layer, in mm/min.
     pub first_retract_speed: f32,
+
+    /// Make thick parts hollow, with this wall thickness in mm. Leave out for
+    /// solid parts.
+    #[arg(long)]
+    pub hollow: Option<f32>,
+    /// Number of drain holes in a hollow part.
+    #[arg(long, default_value_t = 2)]
+    pub drain_holes: u32,
+    /// Diameter of each drain hole in mm.
+    #[arg(long, default_value_t = 2.5)]
+    pub drain_hole_diameter: f32,
+    /// Distance between the pillars in a cavity in mm. 0 gives no pillars.
+    #[arg(long, default_value_t = 0.0)]
+    pub pillar_spacing: f32,
 
     #[arg(long)]
     /// Path to a preview image, will be scaled as needed.
@@ -147,6 +162,18 @@ impl Args {
             },
             first_layers: Height::Layers(self.first_layers),
             transition_layers: Height::Layers(self.transition_layers),
+        })
+    }
+
+    /// Return the hollowing settings, or `None` if the parts stay solid.
+    pub fn hollow(&self) -> Option<Hollow> {
+        self.hollow.map(|wall_thickness| Hollow {
+            enabled: true,
+            wall_thickness,
+            pillar_spacing: self.pillar_spacing,
+            drain_holes: self.drain_holes,
+            drain_hole_diameter: self.drain_hole_diameter,
+            ..Default::default()
         })
     }
 

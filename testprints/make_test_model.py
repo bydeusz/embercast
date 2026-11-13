@@ -1,13 +1,16 @@
-"""Write the STL model for the first Embercast test print.
+"""Write the STL models for the Embercast test prints.
 
-The model is a base plate of 30 x 20 x 1.5 mm with three parts on top: a
-10 mm cube, the letter F and three thin square pins. The script writes the
+The plate model is a base plate of 30 x 20 x 1.5 mm with three parts on top:
+a 10 mm cube, the letter F and three thin square pins. The script writes the
 model as boxes. The boxes overlap, and the slicer fills the union of the
-boxes. Run the script with the output path as its only argument.
+boxes. The cube model is one solid 20 mm cube for the hollowing test. Run the
+script with the output path, and optionally "cube" as the second argument.
 """
 
 import struct
 import sys
+
+CUBE = [((0.0, 0.0, 0.0), (20.0, 20.0, 20.0))]
 
 BOXES = [
     ((0.0, 0.0, 0.0), (30.0, 20.0, 1.5)),
@@ -49,9 +52,9 @@ def normal(a, b, c):
     return tuple(x / length for x in n)
 
 
-def write_stl(path):
+def write_stl(path, boxes):
     """Write all boxes to path as one binary STL file."""
-    triangles = [t for low, high in BOXES for t in box_triangles(low, high)]
+    triangles = [t for low, high in boxes for t in box_triangles(low, high)]
     with open(path, "wb") as stl:
         stl.write(b"Embercast test print 1".ljust(80, b" "))
         stl.write(struct.pack("<I", len(triangles)))
@@ -63,4 +66,5 @@ def write_stl(path):
 
 
 if __name__ == "__main__":
-    write_stl(sys.argv[1])
+    model = sys.argv[2] if len(sys.argv) > 2 else "plate"
+    write_stl(sys.argv[1], CUBE if model == "cube" else BOXES)

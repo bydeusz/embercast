@@ -12,7 +12,8 @@ use itertools::Itertools;
 use nalgebra::Vector2;
 use num_integer::Roots;
 use slicer::post_process::{
-    elephant_foot_fixer::ElephantFootFixer, variable_layer_height::VariableLayerHeight,
+    elephant_foot_fixer::ElephantFootFixer, hollow::Hollow,
+    variable_layer_height::VariableLayerHeight,
 };
 
 use crate::{
@@ -331,6 +332,23 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
     });
 
     let post_processing = &mut app.project.post_processing;
+
+    let old_hollow = post_processing.hollow.clone();
+    let mut editing = false;
+    post_processing.hollow.enabled = collapsing_toggle(
+        "Hollowing",
+        old_hollow.enabled,
+        |ui| editing = hollow(&mut post_processing.hollow, ui),
+        false,
+        ui,
+    );
+    if post_processing.hollow.enabled != old_hollow.enabled {
+        app.history.track(SliceConfigAction::Hollow(old_hollow).into());
+    }
+    history_tracked_value(
+        (editing, ui, &mut app.history),
+        ("hollow", || SliceConfigAction::Hollow(post_processing.hollow.clone()).into()),
+    );
 
     let old_variable_layer_height = post_processing.variable_layer_height.clone();
     let mut editing = false;
@@ -722,6 +740,81 @@ fn variable_layer_height(this: &mut VariableLayerHeight, ui: &mut Ui) -> bool {
             .being_edited(&mut editing);
         ui.end_row();
     });
+
+    editing
+}
+
+fn hollow(this: &mut Hollow, ui: &mut Ui) -> bool {
+    ui.label("Makes thick parts hollow to save resin. Parts thinner than two walls, such as supports, stay solid. Drain holes go from the lowest part of the cavity straight down through the wall.");
+    ui.add_space(8.0);
+
+    const WALL_TIP: &str = "The thickness of the solid shell around the cavity.";
+    const PILLAR_TIP: &str = "Vertical pillars inside the cavity hold up its roof. A spacing of 0 gives no pillars. Pillars do not trap resin.";
+    const HOLES_TIP: &str = "Holes let the resin out of the cavity and let air in during the lift. A cavity without holes traps resin.";
+
+    let mut editing = false;
+    Grid::new("hollow")
+        .num_columns(2)
+        .spacing([40.0, 4.0])
+        .striped(true)
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Wall Thickness");
+                ui.label(INFO).on_hover_text(WALL_TIP);
+            });
+            ui.horizontal(|ui| {
+                DragValue::new(&mut this.wall_thickness)
+                    .speed(0.05)
+                    .range(0.2..=20.0)
+                    .suffix(" mm")
+                    .ui(ui)
+                    .being_edited(&mut editing);
+                ui.take_available_width();
+            });
+            ui.end_row();
+
+            ui.horizontal(|ui| {
+                ui.label("Pillar Spacing");
+                ui.label(INFO).on_hover_text(PILLAR_TIP);
+            });
+            DragValue::new(&mut this.pillar_spacing)
+                .speed(0.1)
+                .range(0.0..=100.0)
+                .suffix(" mm")
+                .ui(ui)
+                .being_edited(&mut editing);
+            ui.end_row();
+
+            ui.label("Pillar Width");
+            DragValue::new(&mut this.pillar_width)
+                .speed(0.05)
+                .range(0.1..=20.0)
+                .suffix(" mm")
+                .ui(ui)
+                .being_edited(&mut editing);
+            ui.end_row();
+
+            ui.horizontal(|ui| {
+                ui.label("Drain Holes");
+                ui.label(INFO).on_hover_text(HOLES_TIP);
+                if this.drain_holes == 0 {
+                    ui.label(WARNING).on_hover_text(HOLES_TIP);
+                }
+            });
+            DragValue::new(&mut this.drain_holes)
+                .range(0..=16)
+                .ui(ui)
+                .being_edited(&mut editing);
+            ui.end_row();
+
+            ui.label("Hole Diameter");
+            DragValue::new(&mut this.drain_hole_diameter)
+                .speed(0.05)
+                .range(0.5..=20.0)
+                .suffix(" mm")
+                .ui(ui)
+                .being_edited(&mut editing);
+        });
 
     editing
 }
