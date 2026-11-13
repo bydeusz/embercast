@@ -1401,6 +1401,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
+name = "cxdlp_format"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "common",
+ "image",
+ "nalgebra 0.34.1",
+]
+
+[[package]]
 name = "cxx"
 version = "1.0.202"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5162,6 +5172,7 @@ dependencies = [
  "common",
  "criterion",
  "ctb_format",
+ "cxdlp_format",
  "goo_format",
  "image",
  "imageproc",

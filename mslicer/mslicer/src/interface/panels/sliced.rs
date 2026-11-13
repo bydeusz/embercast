@@ -182,7 +182,10 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
                             ui.set_width(150.0);
                             for &format in formats {
                                 let disabled = result.variable_layer_height
-                                    && matches!(format, Format::Raster(RasterFormat::NanoDLP));
+                                    && matches!(
+                                        format,
+                                        Format::Raster(RasterFormat::NanoDLP | RasterFormat::Cxdlp)
+                                    );
 
                                 let mut response =
                                     ui.add_enabled(!disabled, Button::new(format.name()));

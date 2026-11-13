@@ -11,6 +11,7 @@ pub enum SliceMode {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RasterFormat {
+    Cxdlp,
     Goo,
     Ctb(CtbFormat),
     NanoDLP,
@@ -61,7 +62,8 @@ impl SliceMode {
 }
 
 impl RasterFormat {
-    pub const ALL: [Self; 4] = [
+    pub const ALL: [Self; 5] = [
+        Self::Cxdlp,
         Self::Goo,
         Self::Ctb(CtbFormat::Encrypted),
         Self::Ctb(CtbFormat::Legacy),
@@ -70,6 +72,7 @@ impl RasterFormat {
 
     pub fn name(&self) -> &str {
         match self {
+            Self::Cxdlp => "Creality",
             Self::Goo => "Elegoo",
             Self::Ctb(ctb) => ctb.name(),
             Self::NanoDLP => "NanoDLP",
@@ -79,12 +82,14 @@ impl RasterFormat {
     pub fn tip(&self) -> Option<&str> {
         match self {
             Self::Ctb(ctb) => ctb.tip(),
+            Self::Cxdlp => Some("Creality Halot printers (CXDLP v3)"),
             Self::Goo | Self::NanoDLP => None,
         }
     }
 
     pub fn extension(&self) -> &str {
         match self {
+            Self::Cxdlp => "cxdlp",
             Self::Goo => "goo",
             Self::Ctb(..) => "ctb",
             Self::NanoDLP => "nanodlp",
@@ -93,6 +98,7 @@ impl RasterFormat {
 
     pub fn from_extension(extension: &str) -> Option<Self> {
         Some(match extension.to_lowercase().as_str() {
+            "cxdlp" => Self::Cxdlp,
             "goo" => Self::Goo,
             "ctb" => Self::Ctb(CtbFormat::Unknown),
             "nanodlp" => Self::NanoDLP,
@@ -151,7 +157,8 @@ impl VectorFormat {
 
 impl Format {
     pub const VECTOR: [Format; 1] = [Format::Vector(VectorFormat::Svg)];
-    pub const RASTER: [Format; 4] = [
+    pub const RASTER: [Format; 5] = [
+        Format::Raster(RasterFormat::Cxdlp),
         Format::Raster(RasterFormat::Ctb(CtbFormat::Encrypted)),
         Format::Raster(RasterFormat::Goo),
         Format::Raster(RasterFormat::NanoDLP),

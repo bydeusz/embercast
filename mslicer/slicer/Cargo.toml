@@ -22,6 +22,7 @@ harness = false
 [dependencies]
 common.workspace = true
 ctb_format.workspace = true
+cxdlp_format.workspace = true
 goo_format.workspace = true
 mesh_format.workspace = true
 nanodlp_format.workspace = true

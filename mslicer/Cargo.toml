@@ -6,6 +6,7 @@ members = [
     "dist/msla_format",
     "experimental",
     "format/ctb_format",
+    "format/cxdlp_format",
     "format/goo_format",
     "format/mesh_format",
     "format/nanodlp_format",
@@ -18,6 +19,7 @@ members = [
 [workspace.dependencies]
 common = { path = "common" }
 ctb_format = { path = "format/ctb_format" }
+cxdlp_format = { path = "format/cxdlp_format" }
 experimental = { path = "experimental" }
 goo_format = { path = "format/goo_format" }
 mesh_format = { path = "format/mesh_format" }
@@ -89,6 +91,7 @@ zip = "7.2.0"
 opt-level = 0
 package."*".opt-level = 3 # only applies to external deps
 package.ctb_format.opt-level = 3
+package.cxdlp_format.opt-level = 3
 package.goo_format.opt-level = 3
 package.mesh_format.opt-level = 3
 package.nanodlp_format.opt-level = 3

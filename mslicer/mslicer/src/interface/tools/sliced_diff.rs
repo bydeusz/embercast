@@ -134,7 +134,7 @@ fn source_ui(app: &mut PopupApp, ui: &mut Ui, id: SourceId) {
             .clicked()
         {
             app.tasks.add(FileDialog::pick_file(
-                ("Sliced", &["goo", "ctb", "nanodlp"]),
+                ("Sliced", &["cxdlp", "goo", "ctb", "nanodlp"]),
                 move |app, path, _tasks| {
                     let file = File::open(path).unwrap();
                     let ext = path.extension().unwrap().to_string_lossy();

@@ -50,7 +50,7 @@ impl OpenInto {
 
         match ext.to_ascii_lowercase().as_str() {
             "mslicer" if self.project.is_none() => self.project = Some(path),
-            "goo" | "ctb" | "nanodlp" if self.sliced.is_none() => self.sliced = Some(path),
+            "cxdlp" | "goo" | "ctb" | "nanodlp" if self.sliced.is_none() => self.sliced = Some(path),
             "stl" | "obj" => self.models.push((ext.into_owned(), path)),
             _ => {}
         }

@@ -81,7 +81,7 @@ fn import_model(app: &mut App, _ctx: &Context) {
 
 fn load_sliced(app: &mut App, _ctx: &Context) {
     app.tasks.add(FileDialog::pick_file(
-        ("Sliced Model", &["goo", "ctb", "nanodlp"]),
+        ("Sliced Model", &["cxdlp", "goo", "ctb", "nanodlp"]),
         |_app, file, tasks| tasks.push(Box::new(LoadSliced::new(file.to_path_buf()))),
     ));
 }

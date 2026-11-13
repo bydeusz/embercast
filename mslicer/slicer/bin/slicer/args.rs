@@ -83,7 +83,7 @@ pub struct Args {
     #[command(flatten)]
     pub model: ModelArgs,
 
-    /// File to save sliced result to. The extension must be .goo, .ctb, or
+    /// File to save sliced result to. The extension must be .cxdlp, .goo, .ctb, or
     /// .nanodlp.
     pub output: PathBuf,
     #[arg(long, short)]
