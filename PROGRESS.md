@@ -52,8 +52,8 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 | 3 | Supports verbeteren | gebouwd, wacht op testprint 2 |
 | 4 | Hollowing + drain holes | gebouwd, wacht op testprint 3 |
 | 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | klaar |
-| 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | bezig |
-| 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | open |
+| 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | klaar (veldlabels nog niet in hoofdletters) |
+| 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | bezig |
 
 ## Wat af is
 
@@ -87,13 +87,22 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
   - De laagvoorvertoning bestond al in mslicer.
   - CLI: `--analyze` drukt de gevonden holtes af.
 
+- Stap 6, interface en naam:
+  - Thema-module `mslicer/mslicer/src/interface/theme.rs` is de enige plek met kleuren en lettertypes, allemaal uit `design/tokens.json`: inktkleurige vlakken, dunne gouden lijnen, hoeken van 2 en 4 px, goud voor links en selectie, crimson voor problemen.
+  - Lettertypes in `mslicer/mslicer/assets/fonts/` met hun OFL-licentie: Cinzel (titels, woordmerk), Barlow (alle tekst en getallen), Barlow Semi Condensed (knoppen en labels), EB Garamond (uitleg in het About-scherm).
+  - Menu's, de Slice-knop en de tabbladtitels staan in hoofdletters met ruime letterafstand (`theme::label`).
+  - 3D-weergave: achtergrond `bg-base`, bouwplaatraster in ink-300, geselecteerde vlakken goud, overhang en buiten het volume crimson.
+  - Naam: venstertitel, woordmerk linksboven, About-scherm (met verwijzing naar mslicer en UVtools), Help-menu, instellingenmap (`~/Library/Application Support/embercast`) en de tekst in projectbestanden. De update-controle tegen mslicer-versies staat standaard uit.
+  - macOS-app: `mslicer/dist/Embercast.app` (bundel-ID `io.github.bydeusz.embercast`). Bouwen met `mslicer/dist/build-macos-app.sh`; de app staat daarna in `mslicer/target/Embercast.app`.
+  - Tijdelijk icoon: een gouden Cinzel-E op een inkt-tegel, gemaakt met `design/icon/make_icon.swift` (`swift design/icon/make_icon.swift <Cinzel.ttf> <uit.png>`).
+
 ## Nu bezig
 
-Stap 6: interface in de Dark Fantasy-stijl en hernoemen naar Embercast.
+Stap 7: auto-orient, auto-layout, meerdere bouwplaten, tekstlabels, modelreparatie, meetgereedschap.
 
 ## Volgende stap
 
-Stap 7: auto-orient, auto-layout, meerdere bouwplaten, tekstlabels, modelreparatie, meetgereedschap.
+Na stap 7: de uitslagen van de testprints verwerken.
 
 ## Hoe maak je het testbestand opnieuw
 
@@ -151,6 +160,9 @@ mslicer/target/release/slicer --mesh testprints/embercast-test-2.stl testprints/
 
 - Het inlezen van projectbestanden (uit mslicer) begrenst nog niet het aantal modellen en meshes in een bestand. Een gemanipuleerd projectbestand kan de app dus nog laten vastlopen. Voor de nieuwe supportdelen is dat wel begrensd.
 - UVtools meldt bij een platte onderkant op supports altijd een "eiland". Extra supports zetten op plekken die in de lagen echt los hangen, hoort bij stap 5.
+- De veldlabels in de panelen ("Slice Mode", "Printer" en zo) staan nog in gewone schrijfwijze. egui kent geen letterafstand voor de hele app, dus elke tekst moet apart; dat zijn er honderden.
+- Er is nog geen eigen logo of embleem. Het icoon is een tijdelijke monogram-E.
+- De programmanaam in de bundel is nog `mslicer` (`Contents/MacOS/mslicer`). macOS toont overal "Embercast", maar in Terminal en logbestanden zie je de oude naam.
 - Afvoergaten worden alleen automatisch geplaatst, recht omlaag. Zelf een plek voor een gat aanklikken kan nog niet.
 - Een model met holte dat direct op de bouwplaat staat, krijgt gaten die tegen de plaat uitkomen. Die zijn dan dicht. Zet holle modellen op supports.
 - CXDLP kent één terugtreksnelheid voor alle lagen. Het profiel heeft 150 mm/min voor de bodemlagen en 180 mm/min daarna; in het bestand komt 180 mm/min (3 mm/s).

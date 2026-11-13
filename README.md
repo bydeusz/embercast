@@ -6,12 +6,18 @@ Embercast is a fork of [mslicer](https://github.com/connorslade/mslicer) by Conn
 
 ## Status
 
-Early stage. The first goal is `.cxdlp` export, the file format the Halot One Plus reads. After that: a printer preset, better supports, hollowing with drain holes, print analysis and a dark fantasy interface.
+Embercast exports `.cxdlp` for the Halot One Plus, has a preset for that printer with a Siraya Tech Build profile, places supports with a raft, hollows thick parts with pillars and drain holes, and checks a print for islands, resin traps and suction cups. The first test prints are still to be done.
 
 ## Contents
 
+- `mslicer/` holds the slicer: the app, the slicer library, the file formats (including `format/cxdlp_format`) and the tools.
 - `profiles/` holds the printer and resin profile for the Halot One Plus with Siraya Tech Build at 50 µm.
-- `design/` holds the design tokens and guidelines for the interface.
+- `design/` holds the design tokens and guidelines for the interface, and the script for the temporary icon.
+- `testprints/` holds the test models and the scripts that make them.
+
+## Build
+
+Install Rust with rustup, then run `mslicer/dist/build-macos-app.sh`. The app is then in `mslicer/target/Embercast.app`. For development, run `cargo run -p mslicer` in `mslicer/`.
 
 ## License
 
