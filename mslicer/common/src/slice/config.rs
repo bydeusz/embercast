@@ -6,7 +6,7 @@ use nalgebra::{Vector2, Vector3};
 use crate::{
     misc::lerp,
     serde::{Deserializer, SerdeExt, Serializer},
-    slice::format::SliceMode,
+    slice::{format::SliceMode, profiles},
     units::{
         CentimetersPerSecond, CubicMilimeters, Milimeter, Milimeters, Minutes, Seconds,
         SquareMilimeters,
@@ -354,25 +354,21 @@ impl Supersample {
 }
 
 impl Default for SliceConfig {
+    /// Return the settings of the Creality Halot One Plus with the Siraya Tech Build profile.
     fn default() -> Self {
+        let profile = profiles::siraya_build_halot_one_plus();
         Self {
             mode: SliceMode::Raster,
             supersample: Default::default(),
             exposure_remap: Default::default(),
 
-            platform_resolution: Vector2::new(11_520, 5_120),
-            platform_size: Vector3::new(218.88, 122.904, 260.0).map(Milimeters::new),
-            slice_height: Milimeters::new(0.05),
-            exposure_config: ExposureConfig {
-                exposure_time: Seconds::new(3.0),
-                ..Default::default()
-            },
-            first_exposure_config: ExposureConfig {
-                exposure_time: Seconds::new(30.0),
-                ..Default::default()
-            },
-            first_layers: Height::Distance(Milimeters::new(0.5)),
-            transition_layers: Height::Distance(Milimeters::new(0.2)),
+            platform_resolution: profiles::halot_one_plus_resolution(),
+            platform_size: profiles::halot_one_plus_size(),
+            slice_height: profile.slice_height,
+            exposure_config: profile.exposure_config,
+            first_exposure_config: profile.first_exposure_config,
+            first_layers: profile.first_layers,
+            transition_layers: profile.transition_layers,
         }
     }
 }

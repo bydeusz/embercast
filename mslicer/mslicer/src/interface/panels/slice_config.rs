@@ -22,7 +22,7 @@ use crate::{
             Config,
             printers::{DEFAULT_PRINTERS, Printer},
         },
-        history::SliceConfigAction,
+        history::{History, SliceConfigAction},
         selected::SelectedPrinter,
         state::UiState,
     },
@@ -35,7 +35,10 @@ use crate::{
     util::ext::FloatExt,
 };
 use common::{
-    slice::{ExposureConfig, ExposureRemap, SliceMode, Supersample},
+    slice::{
+        ExposureConfig, ExposureRemap, SliceConfig, SliceMode, Supersample,
+        profiles::{ResinProfile, resin_profiles},
+    },
     units::{Micrometer, Milimeter, Minute},
 };
 
@@ -164,6 +167,22 @@ pub fn ui(app: &mut App, ui: &mut Ui, _ctx: &Context) {
             (app.project.models.iter_mut())
                 .for_each(|model| model.update_oob(&slice_config.platform_size));
         }
+
+        ui.label("Resin Profile");
+        let profiles = resin_profiles();
+        let current = profiles.iter().find(|profile| profile.matches(slice_config));
+        ComboBox::from_id_salt("resin_profile")
+            .selected_text(current.map_or("Custom", |profile| profile.name))
+            .show_ui(ui, |ui| {
+                for profile in &profiles {
+                    let selected = current == Some(profile);
+                    let response = ui.selectable_label(selected, profile.name);
+                    if response.on_hover_text(profile.printer).clicked() {
+                        apply_resin_profile(profile, slice_config, &mut app.history);
+                    }
+                }
+            });
+        ui.end_row();
 
         ui.label("Slice Height");
         ui.horizontal(|ui| {
@@ -752,4 +771,26 @@ fn elephant_foot_fixer(this: &mut ElephantFootFixer, ui: &mut Ui) -> bool {
         });
 
     editing
+}
+
+/// Copy the settings of `profile` into `config` and add one undo step for each changed setting.
+fn apply_resin_profile(profile: &ResinProfile, config: &mut SliceConfig, history: &mut History) {
+    let old = config.clone();
+    profile.apply(config);
+
+    if old.slice_height != config.slice_height {
+        history.track(SliceConfigAction::SliceHeight(old.slice_height).into());
+    }
+    if old.first_layers != config.first_layers {
+        history.track(SliceConfigAction::FirstLayers(old.first_layers).into());
+    }
+    if old.transition_layers != config.transition_layers {
+        history.track(SliceConfigAction::TransitionLayers(old.transition_layers).into());
+    }
+    if old.exposure_config != config.exposure_config {
+        history.track(SliceConfigAction::NormalExposure(old.exposure_config).into());
+    }
+    if old.first_exposure_config != config.first_exposure_config {
+        history.track(SliceConfigAction::FirstExposure(old.first_exposure_config).into());
+    }
 }

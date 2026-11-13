@@ -16,58 +16,58 @@ pub struct Args {
     /// Supersampling anti-aliasing (SSAA) factor.
     // todo: allow configuring anisotropic AA
     pub supersample: u8,
-    #[arg(long, default_value = "11520, 5120", value_parser = vector_value_parser::<u32, 2>, )]
+    #[arg(long, default_value = "4320, 2560", value_parser = vector_value_parser::<u32, 2>, )]
     /// Resolution of the printer mask display in pixels.
     pub platform_resolution: Vector2<u32>,
-    #[arg(long, default_value = "218.88, 122.904, 260.0", value_parser = vector_value_parser::<f32, 3>)]
+    #[arg(long, default_value = "172.8, 102.4, 160.0", value_parser = vector_value_parser::<f32, 3>)]
     /// Size of the printer display / platform in mm.
     pub platform_size: Vector3<f32>,
     #[arg(long, default_value_t = 0.05)]
     /// Layer height in mm.
     pub layer_height: f32,
-    #[arg(long, default_value_t = 3)]
+    #[arg(long, default_value_t = 6)]
     /// Number of 'first layers'. These are layers that obey the --first-
     /// exposure config flags.
     pub first_layers: u32,
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 0)]
     /// Number of transition layers. These are layers that interpolate from the
     /// first layer config to the default config.
     pub transition_layers: u32,
 
-    #[arg(long, default_value_t = 3.0)]
+    #[arg(long, default_value_t = 3.2)]
     /// Layer exposure time in seconds.
     pub exposure_time: f32,
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, default_value_t = 4.0)]
     /// Time between build plate stopping and the exposure, in seconds.
     pub exposure_delay: f32,
     #[arg(long, default_value_t = 100.0)]
     /// Layer exposure PWM (overall brightness). 0%–100%.
     pub exposure_pwm: f32,
-    #[arg(long, default_value_t = 5.0)]
+    #[arg(long, default_value_t = 6.0)]
     /// Distance to lift the platform after exposing each regular layer, in mm.
     pub lift_distance: f32,
-    #[arg(long, default_value_t = 65.0)]
+    #[arg(long, default_value_t = 60.0)]
     /// The speed to lift the platform after exposing each regular layer, in
     /// mm/min.
     pub lift_speed: f32,
-    #[arg(long, default_value_t = 150.0)]
+    #[arg(long, default_value_t = 180.0)]
     /// The speed to retract (move down) the platform after exposing each
     /// regular layer, in mm/min.
     pub retract_speed: f32,
 
-    #[arg(long, default_value_t = 30.0)]
+    #[arg(long, default_value_t = 35.0)]
     /// First layer exposure time in seconds.
     pub first_exposure_time: f32,
-    #[arg(long, default_value_t = 1.0)]
+    #[arg(long, default_value_t = 4.0)]
     /// Time between build plate stopping and the exposure for first layers, in seconds.
     pub first_exposure_delay: f32,
     #[arg(long, default_value_t = 100.0)]
     /// First layer exposure PWM (overall brightness). 0%–100%.
     pub first_exposure_pwm: f32,
-    #[arg(long, default_value_t = 5.0)]
+    #[arg(long, default_value_t = 6.0)]
     /// Distance to lift the platform after exposing each first layer, in mm.
     pub first_lift_distance: f32,
-    #[arg(long, default_value_t = 65.0)]
+    #[arg(long, default_value_t = 60.0)]
     /// The speed to lift the platform after exposing each first layer, in
     /// mm/min.
     pub first_lift_speed: f32,

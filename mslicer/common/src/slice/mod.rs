@@ -7,6 +7,7 @@ use nalgebra::{Vector2, Vector3};
 
 mod config;
 pub mod format;
+pub mod profiles;
 pub use config::{ExposureConfig, ExposureRemap, Height, SliceConfig, Supersample};
 pub use format::SliceMode;
 
