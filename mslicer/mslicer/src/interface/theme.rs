@@ -68,6 +68,11 @@ pub const SERIF: &str = "serif";
 pub const RADIUS_SM: u8 = 2;
 pub const RADIUS_MD: u8 = 4;
 
+/// The Cinzel font file, for titles and for text labels.
+pub const CINZEL_FILE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/Cinzel-Variable.ttf"));
+/// The Barlow SemiBold font file, for text labels.
+pub const LABEL_FONT_FILE: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/fonts/Barlow-SemiBold.ttf"));
+
 macro_rules! font {
     ($name:literal) => {
         FontData::from_static(include_bytes!(concat!(
@@ -89,7 +94,7 @@ pub fn fonts() -> FontDefinitions {
         ("Barlow", font!("Barlow-Regular.ttf")),
         ("Barlow Medium", font!("Barlow-Medium.ttf")),
         ("Barlow Semi Condensed", font!("BarlowSemiCondensed-Medium.ttf")),
-        ("Cinzel", font!("Cinzel-Variable.ttf")),
+        ("Cinzel", FontData::from_static(CINZEL_FILE)),
         ("EB Garamond", font!("EBGaramond-Variable.ttf")),
     ] {
         fonts.font_data.insert(name.to_owned(), Arc::new(data));

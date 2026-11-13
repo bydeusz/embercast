@@ -16,6 +16,7 @@ common.workspace = true
 mesh_format.workspace = true
 slicer.workspace = true
 
+ab_glyph.workspace = true
 anyhow.workspace = true
 clap.workspace = true
 gerber_parser.workspace = true

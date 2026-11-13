@@ -10,6 +10,7 @@ pub mod repair;
 pub mod sliced_diff;
 pub mod supports;
 pub mod test_pattern;
+pub mod text_mesh;
 pub use exposure::{exposure_test, internal_exposure_test};
 pub mod height_map;
 pub mod image;

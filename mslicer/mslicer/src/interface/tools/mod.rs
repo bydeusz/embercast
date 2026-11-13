@@ -19,6 +19,7 @@ pub mod printed_circuit_board;
 pub mod sdf_slicer;
 pub mod sliced_diff;
 pub mod test_pattern;
+pub mod text_label;
 
 #[derive(Default)]
 pub struct Tools {
@@ -32,6 +33,7 @@ pub struct Tools {
     sliced_diff: SlicedDiff,
     height_map: HeightMap,
     image: Image,
+    text_label: text_label::TextLabel,
 
     #[cfg(feature = "experimental")]
     sdf_slicer: experimental::sdf::SdfSlicer,

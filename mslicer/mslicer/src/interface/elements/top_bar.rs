@@ -170,6 +170,7 @@ pub fn ui(app: &mut App, ctx: &Context) {
                     });
 
                     labeled_separator(ui, "Mesh");
+                    tool!(app, ui, text_label);
                     tool!(app, ui, height_map);
                     ui.menu_button("Fun", |ui| {
                         tool!(app, ui, phonograph_record);
