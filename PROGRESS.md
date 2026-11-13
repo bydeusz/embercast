@@ -53,7 +53,7 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
 | 4 | Hollowing + drain holes | gebouwd, wacht op testprint 3 |
 | 5 | Analyse (islands, resin traps, overhangs, laagvoorvertoning) | klaar |
 | 6 | Interface in Dark Fantasy-stijl, hernoemen naar Embercast | klaar (veldlabels nog niet in hoofdletters) |
-| 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | bezig |
+| 7 | Later: auto-orient, auto-layout, meerdere platen, labels, reparatie, meten | klaar |
 
 ## Wat af is
 
@@ -96,13 +96,21 @@ Ik werk intussen verder aan de stappen die hier niet van afhangen.
   - macOS-app: `mslicer/dist/Embercast.app` (bundel-ID `io.github.bydeusz.embercast`). Bouwen met `mslicer/dist/build-macos-app.sh`; de app staat daarna in `mslicer/target/Embercast.app`.
   - Tijdelijk icoon: een gouden Cinzel-E op een inkt-tegel, gemaakt met `design/icon/make_icon.swift` (`swift design/icon/make_icon.swift <Cinzel.ttf> <uit.png>`).
 
+- Stap 7:
+  - Auto Orient (knop bij het model, `tools/src/auto_orient.rs`): probeert 256 richtingen, de zes assen en de normalen van de 32 grootste vlakken, en kiest de stand met het minste support-oppervlak (vlakken binnen 30° van recht omlaag, zonder de onderkant op de plaat), met de hoogte als tweede doel. Undo werkt.
+  - Auto-layout: bestond al in mslicer (Tools, Auto Layout en Quick Layout). Werkt nu per bouwplaat.
+  - Meerdere bouwplaten: keuzelijst "PLATE" naast SLICE om te wisselen of een nieuwe plaat te maken, en "Move to Plate" bij een model. Alleen de actieve plaat wordt getoond en gesliced. Opgeslagen in het projectbestand (versie 19).
+  - Tekstlabels: Tools, Mesh, "Text Label". Maakt een 3D-tekstmodel in Barlow SemiBold of Cinzel met instelbare grootte en diepte. Zet het op of half in je model.
+  - Modelreparatie: bestond al in mslicer (bij het model: Mesh, Repair).
+  - Meten: vierde gereedschap in de 3D-weergave (sneltoets 4). Klik twee punten aan; linksonder staan de afstand en het verschil in X, Y en Z.
+
 ## Nu bezig
 
-Stap 7: auto-orient, auto-layout, meerdere bouwplaten, tekstlabels, modelreparatie, meetgereedschap.
+Niets. Alle stappen uit het stappenplan zijn gebouwd. Wat overblijft hangt af van de testprints (zie "WACHT OP JOU").
 
 ## Volgende stap
 
-Na stap 7: de uitslagen van de testprints verwerken.
+De uitslag van de Chitubox-vergelijking en de testprints verwerken. Daarna eventueel de restpunten onder "Bekende beperkingen".
 
 ## Hoe maak je het testbestand opnieuw
 
